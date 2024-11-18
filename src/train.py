@@ -89,8 +89,9 @@ def save_model(model, filename):
 def process(model, model_filename, epochs):
     train_dataloader, test_dataloader = get_data(batch_size=32)
     loss_function = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
+    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
+    # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, epochs)
 
     stats = np.zeros((3, epochs)) # accuracy, loss, time
     for epoch in range(epochs):
@@ -122,9 +123,10 @@ if __name__ == "__main__":
         model = resnet.ResNet9()
     elif model_name == "resnet18":
         model = resnet.ResNet18()
+    elif model_name == "resnet20":
+        model = resnet.ResNet20()
     else:
-        print("Incorrect model name, options: lenet, resnet9, resnet18")
+        print("Incorrect model name, options: lenet, resnet9, resnet18, resnet20")
         sys.exit()
-    filename = model_name + ".pth"
-    process(model, filename, epochs)
+    process(model, model_name, epochs)
     

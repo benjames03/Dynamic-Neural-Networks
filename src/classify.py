@@ -45,6 +45,11 @@ def load_resnet18():
     model.load_state_dict(torch.load(f"../models/resnet18.pth", weights_only=True))
     return model
 
+def load_resnet20():
+    model = resnet.ResNet20().to("cpu")
+    model.load_state_dict(torch.load(f"../models/resnet20.pth", weights_only=True))
+    return model
+
 def test(dataloader, model, loss_fn, threshold):
     model.eval()
     test_loss, correct = 0, 0
@@ -66,7 +71,7 @@ start = time.time()
 loader = get_data(batch_size=32)
 
 lenet = load_lenet()
-resnets = [load_resnet9(), load_resnet18()]
+resnets = [load_resnet9(), load_resnet20()]
 loss_fn = nn.CrossEntropyLoss()
 
 n = 21
@@ -81,7 +86,7 @@ data[0]["thresholds"] = np.linspace(0, 1, n)
 data[1]["thresholds"] = np.linspace(0, 1, n)
 
 for i, resnet in enumerate(resnets):
-    print("----------RESNET9----------" if i == 0 else "----------RESNET18----------")
+    print("---------------------------")
     model = big_little.Model(lenet, resnet).to("cpu")
     for j, threshold in enumerate(data[i]["thresholds"]):
         go = time.time()
@@ -90,7 +95,7 @@ for i, resnet in enumerate(resnets):
 
         stop = time.time()
         data[i]["cpu_time"][j] = stop - go
-        data[i]["operations"][j] = model.resnet_calls# / model.lenet_calls
+        data[i]["operations"][j] = model.resnet_calls
 
         print(f"Threshold {threshold:.2f} finished in {stop - go:.2f} seconds")
         print(f"Resnet called {model.resnet_calls}/{model.lenet_calls} times ({100*model.resnet_calls/model.lenet_calls:.1f}%)")
