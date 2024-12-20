@@ -1,6 +1,6 @@
 # modules
-import numpy as np
 import torch.nn as nn
+import torch
 
 # MAC classes
 class MACArray:
@@ -21,21 +21,21 @@ class MACArray:
                 cell.mult(input_weights)
 
     def combine(self):
-        return np.array([cell.accumulator for cell in self.cells], dtype=np.float64)
+        return torch.tensor([cell.accumulator for cell in self.cells])
 
 class MACCell:
     def __init__(self, multipliers=64):
-        self.weights = np.zeros(multipliers)
+        self.weights = torch.empty(multipliers)
         self.accumulator = 0
 
     def __str__(self):
-        return np.array2string(self.weights[:10], separator=" ", threshold=0)
+        return f"[{self.weights[0]:.2f}, {self.weights[1]:.2f}, ...]"
 
     def load(self, weights):
         self.weights = weights
 
     def mult(self, weights):
-        self.accumulator = np.sum(self.weights * weights)
+        self.accumulator = torch.sum(self.weights * weights)
 
 def atomic(input_data, pos, depth):
     # broadcast the input data and multiply and accumulate for each cell
@@ -43,7 +43,7 @@ def atomic(input_data, pos, depth):
     return mac_array.combine()
 
 def stripe(input_data, output_shape, depth, kpos):
-    result = np.empty(output_shape)
+    result = torch.empty(output_shape)
     for oy in range(output_shape[1]):
         for ox in range(output_shape[0]):
             ix = ox + kpos[0]
@@ -53,7 +53,7 @@ def stripe(input_data, output_shape, depth, kpos):
     return result
 
 def block(input_data, kernels, output_shape, depth):
-    acc = np.zeros(output_shape)
+    acc = torch.zeros(output_shape)
     for y in range(kernels.shape[2]):
         for x in range(kernels.shape[1]):
             load_kernels(kernels, (x, y, depth))
@@ -62,7 +62,7 @@ def block(input_data, kernels, output_shape, depth):
 
 def channel(input_data, kernels, output_shape):
     block_ops = int((input_data.shape[-1] + 63) / 64)
-    blocks = np.zeros(output_shape, dtype=np.float64)
+    blocks = torch.zeros(output_shape)
     for depth in range(block_ops):
         blocks += block(input_data, kernels, output_shape, depth)
     return blocks
@@ -87,12 +87,12 @@ def convolution(input_cube, kernels):
 
 def create_data(input_shape, kernel_shape):
     # set up input and kernels
-    input_cube = np.ones(input_shape, dtype=np.float64)
+    input_cube = torch.empty(input_shape)
     for i in range(input_cube.shape[0]):
         for j in range(input_cube.shape[1]):
             for k in range(input_cube.shape[2]):
                 input_cube[i, j, k] = i + j * input_cube.shape[0]
-    kernels = np.zeros(kernel_shape, dtype=np.float64)
+    kernels = torch.empty(kernel_shape)
     for i in range(kernels.shape[0]):
         kernels[i, :, :, :] = i
     
@@ -100,6 +100,7 @@ def create_data(input_shape, kernel_shape):
 
 mac_array = MACArray(size=16, multipliers=64)
 
-input_cube, kernels = create_data(input_shape=(6, 6, 128), kernel_shape=(16, 3, 3, 128))
-result = convolution(input_cube, kernels)
-print(result[:,:,1].T)
+# input_cube, kernels = create_data(input_shape=(6, 6, 128), kernel_shape=(16, 3, 3, 128))
+# result = convolution(input_cube, kernels)
+# print(result[:,:,1].T)
+print(mac_array)
