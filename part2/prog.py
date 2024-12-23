@@ -54,10 +54,15 @@ class DirectConv2d():
         result = torch.empty(self.output_shape)
         for oy in range(self.output_shape[2]):
             for ox in range(self.output_shape[3]):
-                iy = oy + ky
-                ix = ox + kx
-                if iy < input_data.shape[2] and ix < input_data.shape[3]:
-                    result[0, :, oy, ox] = self.atomic(input_data, depth, iy, ix)
+                iy = oy + ky - self.padding
+                ix = ox + kx - self.padding
+                if -self.padding <= iy and iy < input_data.shape[2] + self.padding and \
+                   -self.padding <= ix and ix < input_data.shape[3] + self.padding:
+                    if iy < 0 or input_data.shape[2] <= iy or \
+                       ix < 0 or input_data.shape[3] <= ix:
+                        result[0, :, oy, ox] = torch.zeros(self.output_shape[1])
+                    else:
+                        result[0, :, oy, ox] = self.atomic(input_data, depth, iy, ix)
         return result
 
     def block(self, input_data, kernels, depth):
@@ -90,14 +95,14 @@ def load_kernels(kernels, kd, ky, kx): # e.g. (x, y, z)
         mac_array.cells[i].load(kernels[i, 64*kd:64*kd+64, ky, kx]) # load kernel weights into each mac cell
 
 mac_array = MACArray(size=16, multipliers=64)
-C = DirectConv2d(stride=1, padding=0, dilation=1)
 input_cube = torch.rand((1, 128, 6, 6))
 kernels = torch.rand((16, 128, 3, 3))
 
-a = C.conv2d(input_cube, kernels)
-b = F.conv2d(input_cube, kernels, padding=0)
-
-print(torch.equal(a, b),
-      F.cosine_similarity(a.flatten(), b.flatten(), dim=0).item())
+for i in range(3):
+    C = DirectConv2d(stride=1, padding=i, dilation=1)
+    a = C.conv2d(input_cube, kernels)
+    b = F.conv2d(input_cube, kernels, padding=i)
+    print(i, "padding -", torch.equal(a, b),
+        F.cosine_similarity(a.flatten(), b.flatten(), dim=0).item())
 # print(a[0,0])
 # print(b[0,0])
