@@ -54,8 +54,8 @@ class DirectConv2d():
         result = torch.zeros(self.output_shape)
         for oy in range(self.output_shape[2]):
             for ox in range(self.output_shape[3]):
-                iy = oy + ky - self.padding
-                ix = ox + kx - self.padding
+                iy = oy * self.stride + ky - self.padding
+                ix = ox * self.stride + kx - self.padding
                 if 0 <= iy and iy < input_data.shape[2] and \
                    0 <= ix and ix < input_data.shape[3]:
                     result[0, :, oy, ox] = self.atomic(input_data, depth, iy, ix)
@@ -82,8 +82,7 @@ class DirectConv2d():
                              kernels.shape[0],
                              int((self.padding * 2 + input_cube.shape[2] - (kernels.shape[2] - 1) * self.dilation - 1) / self.stride + 1),
                              int((self.padding * 2 + input_cube.shape[3] - (kernels.shape[3] - 1) * self.dilation - 1) / self.stride + 1))
-        blocks = self.channel(input_cube, kernels)
-        return blocks
+        return self.channel(input_cube, kernels)
     
 def load_kernels(kernels, kd, ky, kx): # e.g. (x, y, z)
     # cache kernels into macs
@@ -94,15 +93,14 @@ mac_array = MACArray(size=16, multipliers=64)
 input_cube = torch.rand((1, 128, 6, 6))
 kernels = torch.rand((16, 128, 3, 3))
 
-import time
-start = time.time()
-for i in range(1):
-    C = DirectConv2d(stride=1, padding=1, dilation=1)
-    a = C.conv2d(input_cube, kernels)
-    b = F.conv2d(input_cube, kernels, padding=1)
-    print(1, "padding -", torch.equal(a, b),
-        F.cosine_similarity(a.flatten(), b.flatten(), dim=0).item())
-end = time.time()
-print(f"Finished in {end-start:.2f}s")
+paddings = [0, 1, 2, 3]
+strides = [1, 2, 3]
+for padding in paddings:
+    for stride in strides:
+        C = DirectConv2d(stride=stride, padding=padding, dilation=1)
+        a = C.conv2d(input_cube, kernels)
+        b = F.conv2d(input_cube, kernels, stride=stride, padding=padding)
+        print(f"pad={padding}, stride={stride} ->", torch.equal(a, b),
+            F.cosine_similarity(a.flatten(), b.flatten(), dim=0).item())
 # print(a[0,0])
 # print(b[0,0])
