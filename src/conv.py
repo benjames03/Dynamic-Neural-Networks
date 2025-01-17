@@ -101,6 +101,7 @@ for padding in paddings:
         a = C.conv2d(input_cube, kernels)
         b = F.conv2d(input_cube, kernels, stride=stride, padding=padding)
         print(f"pad={padding}, stride={stride} ->", torch.equal(a, b),
-            F.cosine_similarity(a.flatten(), b.flatten(), dim=0).item())
+            F.cosine_similarity(a.flatten(), b.flatten(), dim=0).item(),
+            "mean dif -", torch.abs(a - b).mean())
 # print(a[0,0])
 # print(b[0,0])
