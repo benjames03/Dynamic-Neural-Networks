@@ -1,0 +1,25 @@
+Arithmetic
+ - bit flips
+ - rounding errors
+ - underflow/overflow
+
+Control Logic
+ - stalls/delays (skip operations)
+ - random op swaps
+
+Data path
+ - gaussian noise
+ - data corruption (zeros)
+
+Memory
+ - cell corruption
+
+Power
+ - voltage drop (scale down vals)
+
+METHODS:
+ - bit flips/shifts
+ - operation skips/swaps
+ - rounding or under(over)flow
+ - noise or scaling
+ - zeroing out multipliers/cells

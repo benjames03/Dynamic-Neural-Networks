@@ -17,91 +17,78 @@ class MACArray:
         return str
 
     def broadcast(self, input_weights):
-        if len(input_weights) == self.multipliers:
-            for cell in self.cells:
-                cell.mult(input_weights)
+        for cell in self.cells:
+            cell.mult(input_weights)
 
     def combine(self):
         return torch.tensor([cell.accumulator for cell in self.cells])
 
 class MACCell:
     def __init__(self, multipliers=64):
-        self.weights = torch.empty(multipliers)
+        self.weights = torch.zeros(multipliers)
         self.accumulator = 0
 
     def __str__(self):
         return f"[{self.weights[0]:.2f}, {self.weights[1]:.2f}, ...]"
 
     def load(self, weights):
-        self.weights = weights
+        self.weights.zero_()
+        self.weights[:len(weights)] = weights
 
     def mult(self, weights):
-        self.accumulator = torch.sum(self.weights * weights)
+        self.accumulator = torch.sum(self.weights[:len(weights)] * weights)
 
-class DirectConv2d():
-    def __init__(self, stride=1, padding=0, dilation=1):
-        self.stride = stride
-        self.padding = padding
-        self.dilation = dilation
+class DirectConv2d(nn.Conv2d):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1):
+        super().__init__(in_channels, out_channels, kernel_size, stride, padding, dilation)
+        self.mac_array = MACArray(size=out_channels, multipliers=64)
         self.output_shape = (0, 0, 0, 0)
+
+    def load_kernels(self, kd, ky, kx): # e.g. (z, y, x)
+        # cache kernels into macs
+        for i in range(self.mac_array.size):
+            self.mac_array.cells[i].load(self.weight[i, 64*kd:64*(kd+1), ky, kx]) # load kernel weights into each mac cell
 
     def atomic(self, input_data, depth, y, x):
         # broadcast the input data and multiply and accumulate for each cell
-        mac_array.broadcast(input_data[0, 64*depth:64*(depth+1), y, x])
-        return mac_array.combine()
+        self.mac_array.broadcast(input_data[0, 64*depth:64*(depth+1), y, x])
+        return self.mac_array.combine()
 
     def stripe(self, input_data, depth, ky, kx):
         result = torch.zeros(self.output_shape)
         for oy in range(self.output_shape[2]):
             for ox in range(self.output_shape[3]):
-                iy = oy * self.stride + ky - self.padding
-                ix = ox * self.stride + kx - self.padding
+                iy = oy * self.stride[0] + ky - self.padding[0]
+                ix = ox * self.stride[1] + kx - self.padding[1]
                 if 0 <= iy and iy < input_data.shape[2] and \
                    0 <= ix and ix < input_data.shape[3]:
                     result[0, :, oy, ox] = self.atomic(input_data, depth, iy, ix)
         return result
 
-    def block(self, input_data, kernels, depth):
+    def block(self, input_data, depth):
         acc = torch.zeros(self.output_shape)
-        for ky in range(kernels.shape[2]):
-            for kx in range(kernels.shape[3]):
-                load_kernels(kernels, depth, ky, kx)
+        for ky in range(self.weight.shape[2]):
+            for kx in range(self.weight.shape[3]):
+                self.load_kernels(depth, ky, kx)
                 acc += self.stripe(input_data, depth, ky, kx)
         return acc
 
-    def channel(self, input_data, kernels):
+    def channel(self, input_data):
         block_ops = int((input_data.shape[1] + 63) / 64)
         blocks = torch.zeros(self.output_shape)
         for depth in range(block_ops):
-            blocks += self.block(input_data, kernels, depth)
+            blocks += self.block(input_data, depth)
         return blocks
 
-    def conv2d(self, input_cube, kernels):
+    def conv2d(self, input):
         # (1, d, h, w)
-        self.output_shape = (input_cube.shape[0],
-                             kernels.shape[0],
-                             int((self.padding * 2 + input_cube.shape[2] - (kernels.shape[2] - 1) * self.dilation - 1) / self.stride + 1),
-                             int((self.padding * 2 + input_cube.shape[3] - (kernels.shape[3] - 1) * self.dilation - 1) / self.stride + 1))
-        return self.channel(input_cube, kernels)
+        self.output_shape = (input.shape[0],
+                             self.weight.shape[0],
+                             int((self.padding[0] * 2 + input.shape[2] - (self.weight.shape[2] - 1) * self.dilation[0] - 1) / self.stride[0] + 1),
+                             int((self.padding[1] * 2 + input.shape[3] - (self.weight.shape[3] - 1) * self.dilation[1] - 1) / self.stride[1] + 1))
+        out = self.channel(input)
+        out += self.bias.view(1, out.shape[1], 1, 1)
+        return out
     
-def load_kernels(kernels, kd, ky, kx): # e.g. (x, y, z)
-    # cache kernels into macs
-    for i in range(mac_array.size):
-        mac_array.cells[i].load(kernels[i, 64*kd:64*kd+64, ky, kx]) # load kernel weights into each mac cell
-
-mac_array = MACArray(size=16, multipliers=64)
-input_cube = torch.rand((1, 128, 6, 6))
-kernels = torch.rand((16, 128, 3, 3))
-
-paddings = [0, 1, 2, 3]
-strides = [1, 2, 3]
-for padding in paddings:
-    for stride in strides:
-        C = DirectConv2d(stride=stride, padding=padding, dilation=1)
-        a = C.conv2d(input_cube, kernels)
-        b = F.conv2d(input_cube, kernels, stride=stride, padding=padding)
-        print(f"pad={padding}, stride={stride} ->", torch.equal(a, b),
-            F.cosine_similarity(a.flatten(), b.flatten(), dim=0).item(),
-            "mean dif -", torch.abs(a - b).mean())
-# print(a[0,0])
-# print(b[0,0])
+    def forward(self, input):
+        return self.conv2d(input)
