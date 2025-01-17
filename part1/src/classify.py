@@ -12,7 +12,7 @@ import lenet
 import resnet
 import big_little
 
-DATASET_PATH = "../datasets/cifar10"
+DATASET_PATH = "../../datasets/cifar10"
 MODELS_PATH = "../models/"
 
 def get_data(batch_size):
