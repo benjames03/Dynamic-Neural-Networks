@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import time
 
 # MAC classes
 class MACArray:
@@ -80,14 +81,23 @@ class DirectConv2d(nn.Conv2d):
             blocks += self.block(input_data, depth)
         return blocks
 
-    def conv2d(self, input):
+    def conv2d(self, input): # assuming batches are of size 1
         # (1, d, h, w)
-        self.output_shape = (input.shape[0],
+        self.output_shape = (1,
                              self.weight.shape[0],
                              int((self.padding[0] * 2 + input.shape[2] - (self.weight.shape[2] - 1) * self.dilation[0] - 1) / self.stride[0] + 1),
                              int((self.padding[1] * 2 + input.shape[3] - (self.weight.shape[3] - 1) * self.dilation[1] - 1) / self.stride[1] + 1))
+        # if (batch_size := input.shape[0]) != 1:
+        #     start = time.time()
+        #     out = torch.zeros((batch_size, *self.output_shape[1:]))
+        #     for b in range(batch_size):
+        #         out[b] = self.channel(input[b].unsqueeze(0))
+        #     out += self.bias.view(1, -1, 1, 1).expand(out.shape[0], -1, out.shape[2], out.shape[3])
+        #     stop = time.time()
+        #     print(f"Time: {stop-start:.2f}s")
+        # else:
         out = self.channel(input)
-        out += self.bias.view(1, out.shape[1], 1, 1)
+        out += self.bias.view(1, -1, 1, 1)
         return out
     
     def forward(self, input):
