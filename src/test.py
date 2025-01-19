@@ -59,6 +59,7 @@ def eval_model(checkpoint=500):
                     current_acc = total_acc / (i+1)
                     accuracies[s, int((i+1) / checkpoint) - 1] = current_acc
                     print(f"\rSample {i+1}: {100 * current_acc}%")
+                    break
 
         test_loss /= len(loader)
         total_acc /= len(loader.dataset)
@@ -72,10 +73,7 @@ def eval_conv_layer():
     simulated = conv.SimConv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
     benchmark = nn.Conv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
     benchmark.weight = simulated.weight
-    # benchmark.bias = simulated.bias
-    with torch.no_grad():
-        benchmark.bias.zero_()
-        simulated.bias.zero_()
+    benchmark.bias = simulated.bias
     a = simulated(input_cube)
     b = benchmark(input_cube)
     print(torch.equal(a, b),
@@ -128,9 +126,9 @@ def eval_linear_to_conv_model():
         for X, y in loader:
             X, y = X.to("cpu"), y.to("cpu")
             pred = model(X)
-            print((pred.argmax(1) == y).sum().item())
+            # print((pred.argmax(1) == y).sum().item())
             break
 
 start = time.time()
-eval_model()
+eval_conv_layer()
 print(f"{time.time()-start:.2f}s")

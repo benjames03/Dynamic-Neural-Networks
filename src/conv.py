@@ -107,18 +107,15 @@ class SimConv2d(nn.Conv2d):
             blocks += self.block(input_data, depth)
         return blocks
 
-    def conv2d(self, input): # assuming batches are of size 1
-        # (1, d, h, w)
+    def conv2d(self, input): # input must be (1, d, h, w)
+        if input.shape[0] != 1:
+            raise ValueError("batch_size must be 1")
+        if len(input.shape) == 3: 
+            input = input.unsqueeze(0)
         self.output_shape = (1,
                              self.weight.shape[0],
                              int((self.padding[0] * 2 + input.shape[2] - (self.weight.shape[2] - 1) * self.dilation[0] - 1) / self.stride[0] + 1),
                              int((self.padding[1] * 2 + input.shape[3] - (self.weight.shape[3] - 1) * self.dilation[1] - 1) / self.stride[1] + 1))
-        # if (batch_size := input.shape[0]) != 1:
-        #     out = torch.zeros((batch_size, *self.output_shape[1:]))
-        #     for b in range(batch_size):
-        #         out[b] = self.channel(input[b].unsqueeze(0))
-        #     out += self.bias.view(1, -1, 1, 1).expand(out.shape[0], -1, out.shape[2], out.shape[3])
-        # else:
         out = self.channel(input)
         out += self.bias.view(1, -1, 1, 1)
         return out
@@ -131,10 +128,10 @@ class SimLinear(nn.Module):
         super(SimLinear, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.conv = nn.Conv2d(in_channels=1, out_channels=out_features, kernel_size=(1, in_features), stride=1, padding=0,)
+        self.conv = SimConv2d(in_channels=1, out_channels=out_features, kernel_size=(1, in_features), stride=1, padding=0)
 
     def forward(self, input):
         input = input.view(1, 1, -1)
         out = self.conv(input)
-        out = out.view(out.shape[1], out.shape[0])
+        out = out.view(1, -1)
         return out

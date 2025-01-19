@@ -42,7 +42,7 @@ class SimLeNet(nn.Module):
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1, padding=0)
         self.maxpool1 = nn.MaxPool2d(kernel_size=3, stride=2)
         
-        self.conv2 = nn.Conv2d(in_channels=30, out_channels=13, kernel_size=3, stride=1, padding=0)
+        self.conv2 = conv.SimConv2d(in_channels=30, out_channels=13, kernel_size=3, stride=1, padding=0)
         self.maxpool2 = nn.MaxPool2d(kernel_size=3, stride=3)
 
         self.linear1 = conv.SimLinear(208, 120)
