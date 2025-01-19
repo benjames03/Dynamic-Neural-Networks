@@ -11,49 +11,18 @@ class MACArray:
     """
 
     def __init__(self, size=16, multipliers=64):
-        self.size = size
-        self.cells = [MACCell(multipliers) for _ in range(size)]
         self.multipliers = multipliers
-    
-    def __str__(self):
-        """Prints the cells and their values"""
-        str = ""
-        for i, cell in enumerate(self.cells):
-            str += f"Cell {i:02} - {cell}\n"
-        return str
+        self.cells = torch.empty((size, multipliers))
+        self.accumulators = torch.empty(size)
+
+    def load(self, weights):
+        weights = F.pad(weights, (0, self.multipliers-weights.size(1)), value=0)
+        self.cells.copy_(weights)
 
     def broadcast(self, weights):
         """Broadcasts weights to all MAC cells and multiplies them"""
-        for cell in self.cells:
-            cell.mult(weights)
-
-    def combine(self):
-        """Returns array of all current cell accumulators"""
-        return torch.tensor([cell.accumulator for cell in self.cells])
-
-class MACCell:
-    """
-    Simulates a single MAC cell
-
-    multipliers (int): The number of multipliers in the cell
-    """
-
-    def __init__(self, multipliers=64):
-        self.weights = torch.zeros(multipliers)
-        self.accumulator = 0
-
-    def __str__(self):
-        """Prints first two values of the cell"""
-        return f"[{self.weights[0]:.2f}, {self.weights[1]:.2f}, ...]"
-
-    def load(self, weights):
-        """Loads kernel weights into the cell"""
-        self.weights.zero_()
-        self.weights[:len(weights)] = weights
-
-    def mult(self, weights):
-        """Multiplies broadcasted input with held kernel weights"""
-        self.accumulator = torch.sum(self.weights[:len(weights)] * weights)
+        weights = F.pad(weights, (0, self.multipliers-weights.size(0)), value=0)
+        self.accumulators.copy_(torch.sum(self.cells * weights, dim=1))
 
 class SimConv2d(nn.Conv2d):
     """
@@ -73,13 +42,12 @@ class SimConv2d(nn.Conv2d):
 
     def load_kernels(self, kd, ky, kx): # e.g. (z, y, x)
         """Cache each kernel slice into a MAC"""
-        for i in range(self.mac_array.size):
-            self.mac_array.cells[i].load(self.weight[i, 64*kd:64*(kd+1), ky, kx])
+        self.mac_array.load(self.weight[:, 64*kd:64*(kd+1), ky, kx])
 
     def atomic(self, input_data, depth, y, x):
         # broadcast the input data and multiply and accumulate for each cell
         self.mac_array.broadcast(input_data[0, 64*depth:64*(depth+1), y, x])
-        return self.mac_array.combine()
+        return self.mac_array.accumulators
 
     def stripe(self, input_data, depth, ky, kx):
         result = torch.zeros(self.output_shape)
