@@ -55,7 +55,7 @@ class MACCell:
         """Multiplies broadcasted input with held kernel weights"""
         self.accumulator = torch.sum(self.weights[:len(weights)] * weights)
 
-class DirectConv2d(nn.Conv2d):
+class SimConv2d(nn.Conv2d):
     """
     A sub class of Conv2d that performs the forward pass using simulated hardware
 
@@ -67,7 +67,7 @@ class DirectConv2d(nn.Conv2d):
     dilation (int or tuple, optional): Spacing between kernel elements. Default: 1
     """
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1):
-        super().__init__(in_channels, out_channels, kernel_size, stride, padding, dilation)
+        super(SimConv2d, self).__init__(in_channels, out_channels, kernel_size, stride, padding, dilation)
         self.mac_array = MACArray(size=out_channels, multipliers=64)
         self.output_shape = (0, 0, 0, 0)
 
@@ -125,3 +125,16 @@ class DirectConv2d(nn.Conv2d):
     
     def forward(self, input):
         return self.conv2d(input)
+    
+class SimLinear(nn.Module):
+    def __init__(self, in_features, out_features):
+        super(SimLinear, self).__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.conv = nn.Conv2d(in_channels=1, out_channels=out_features, kernel_size=(1, in_features), stride=1, padding=0,)
+
+    def forward(self, input):
+        input = input.view(1, 1, -1)
+        out = self.conv(input)
+        out = out.view(out.shape[1], out.shape[0])
+        return out

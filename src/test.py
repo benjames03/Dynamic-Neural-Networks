@@ -26,7 +26,10 @@ def get_data(batch_size):
     return DataLoader(test_data, batch_size=batch_size, shuffle=True)
 
 def load_lenet(simulating=False):
-    model = lenet.LeNet(simulating).to("cpu")
+    if simulating:
+        model = lenet.SimLeNet().to("cpu")
+    else:
+        model = lenet.LeNet().to("cpu")
     model.load_state_dict(torch.load(f"../models/lenet.pth", weights_only=True))
     return model
 
@@ -62,12 +65,11 @@ def eval_model(checkpoint=500):
         stop = time.time()
         if state: print(f"({stop-go:.2f}s)")
  
-    torch.save(accuracies, "../results/conv_comp.pt")
+    # torch.save(accuracies, "../results/conv_comp.pt")
 
 def eval_conv_layer():
-    start = time.time()
     input_cube = torch.rand((32, 3, 32, 32))
-    simulated = conv.DirectConv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
+    simulated = conv.SimConv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
     benchmark = nn.Conv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
     benchmark.weight = simulated.weight
     # benchmark.bias = simulated.bias
@@ -79,7 +81,6 @@ def eval_conv_layer():
     print(torch.equal(a, b),
             F.cosine_similarity(a.flatten(), b.flatten(), dim=0).item(),
             "mean dif -", torch.abs(a - b).mean().item())
-    print(f"{time.time()-start:.2f}s")
 
 def eval_conv():
     paddings = [1]
@@ -91,11 +92,45 @@ def eval_conv():
             input_cube = torch.rand((1, in_channel, 32, 32))
             for padding in paddings:
                 for stride in strides:
-                    C = conv.DirectConv2d(in_channels=in_channel, out_channels=out_channel, kernel_size=3, stride=stride, padding=padding, dilation=1)
+                    C = conv.SimConv2d(in_channels=in_channel, out_channels=out_channel, kernel_size=3, stride=stride, padding=padding, dilation=1)
                     a = C.conv2d(input_cube)
                     b = F.conv2d(input_cube, C.weight, C.bias, stride=stride, padding=padding)
                     print(f"pad={padding}, stride={stride} ->", torch.equal(a, b),
                         F.cosine_similarity(a.flatten(), b.flatten(), dim=0).item(),
                         "mean dif -", torch.abs(a - b).mean())
                     
+def eval_linear_to_conv_layer():
+    input = torch.rand((1, 208))
+
+    linear = nn.Linear(208, 120)
+    output1 = linear(input)
+
+    input = input.view(1, 1, linear.weight.shape[1])
+    weights = linear.weight
+    weights = weights.view(weights.shape[0], 1, 1, weights.shape[1])
+    conv2d = nn.Conv2d(in_channels=1, out_channels=weights.shape[0], kernel_size=(1, weights.shape[3]), stride=1, padding=0)
+    conv2d.weight = nn.Parameter(weights)
+    conv2d.bias = linear.bias
+    output2 = conv2d(input)
+    output2 = output2.view(output2.shape[1], output2.shape[0])
+
+    print(output1.shape)
+    print(output2.shape)
+
+    print(torch.equal(output1, output2),
+            F.cosine_similarity(output1.flatten(), output2.flatten(), dim=0).item(),
+                        "mean dif -", torch.abs(output1 - output2).mean())
+
+def eval_linear_to_conv_model():
+    loader = get_data(batch_size=1)
+    model = load_lenet(True)
+    with torch.no_grad():
+        for X, y in loader:
+            X, y = X.to("cpu"), y.to("cpu")
+            pred = model(X)
+            print((pred.argmax(1) == y).sum().item())
+            break
+
+start = time.time()
 eval_model()
+print(f"{time.time()-start:.2f}s")
