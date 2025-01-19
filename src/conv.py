@@ -16,6 +16,7 @@ class MACArray:
         self.accumulators = torch.empty(size)
 
     def load(self, weights):
+        """Load the kernel weights into the array with zero padding if necessary"""
         weights = F.pad(weights, (0, self.multipliers-weights.size(1)), value=0)
         self.cells.copy_(weights)
 
@@ -26,7 +27,7 @@ class MACArray:
 
 class SimConv2d(nn.Conv2d):
     """
-    A sub class of Conv2d that performs the forward pass using simulated hardware
+    A sub class of Conv2d that performs the forward convolution pass using simulated hardware
 
     in_channels (int): Number of channels in the input image (cube depth)
     out_channels (int): Number of channels produced by the convolution (kernels)
@@ -41,15 +42,16 @@ class SimConv2d(nn.Conv2d):
         self.output_shape = (0, 0, 0, 0)
 
     def load_kernels(self, kd, ky, kx): # e.g. (z, y, x)
-        """Cache each kernel slice into a MAC"""
+        """Cache each kernel slice into a MAC cell"""
         self.mac_array.load(self.weight[:, 64*kd:64*(kd+1), ky, kx])
 
     def atomic(self, input_data, depth, y, x):
-        # broadcast the input data and multiply and accumulate for each cell
+        """Broadcast the input slice and multiply and accumulate for each cell"""
         self.mac_array.broadcast(input_data[0, 64*depth:64*(depth+1), y, x])
         return self.mac_array.accumulators
 
     def stripe(self, input_data, depth, ky, kx):
+        """Slide the sub-kernel position over the cube face"""
         result = torch.zeros(self.output_shape)
         for oy in range(self.output_shape[2]):
             for ox in range(self.output_shape[3]):
@@ -61,6 +63,7 @@ class SimConv2d(nn.Conv2d):
         return result
 
     def block(self, input_data, depth):
+        """Compute a stripe for all sub-kernels"""
         acc = torch.zeros(self.output_shape)
         for ky in range(self.weight.shape[2]):
             for kx in range(self.weight.shape[3]):
@@ -69,6 +72,7 @@ class SimConv2d(nn.Conv2d):
         return acc
 
     def channel(self, input_data):
+        """Compute a block for each depth in the cube"""
         block_ops = int((input_data.shape[1] + 63) / 64)
         blocks = torch.zeros(self.output_shape)
         for depth in range(block_ops):
@@ -76,6 +80,7 @@ class SimConv2d(nn.Conv2d):
         return blocks
 
     def conv2d(self, input): # input must be (1, d, h, w)
+        """Compute a forward convolution pass"""
         if input.shape[0] != 1:
             raise ValueError("batch_size must be 1")
         if len(input.shape) == 3: 
@@ -92,6 +97,13 @@ class SimConv2d(nn.Conv2d):
         return self.conv2d(input)
     
 class SimLinear(nn.Module):
+    """
+    A linear wrapping layer that uses an underlying convolution forward pass
+
+    in_features (int): Number of input neurons
+    out_features (int): Number of output neurons
+    """
+
     def __init__(self, in_features, out_features):
         super(SimLinear, self).__init__()
         self.in_features = in_features
@@ -99,6 +111,7 @@ class SimLinear(nn.Module):
         self.conv = SimConv2d(in_channels=1, out_channels=out_features, kernel_size=(1, in_features), stride=1, padding=0)
 
     def forward(self, input):
+        """Compute forward pass for the simulated linear layer"""
         input = input.view(1, 1, -1)
         out = self.conv(input)
         out = out.view(1, -1)

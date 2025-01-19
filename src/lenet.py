@@ -1,7 +1,11 @@
-from torch import nn, no_grad
+from torch import nn
 import conv
 
 class LeNet(nn.Module):
+    """
+    A LeNet architecture model with two convolutions and three linear layers
+    """
+
     def __init__(self):
         super(LeNet, self).__init__()
         self.relu = nn.ReLU()
@@ -35,11 +39,15 @@ class LeNet(nn.Module):
         return out
     
 class SimLeNet(nn.Module):
+    """
+    A simulated LeNet modelling MAC hardware units
+    """
+
     def __init__(self):
         super(SimLeNet, self).__init__()
         self.relu = nn.ReLU()
         
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1, padding=0)
+        self.conv1 = conv.SimConv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1, padding=0)
         self.maxpool1 = nn.MaxPool2d(kernel_size=3, stride=2)
         
         self.conv2 = conv.SimConv2d(in_channels=30, out_channels=13, kernel_size=3, stride=1, padding=0)
