@@ -10,20 +10,20 @@ class MACArray:
     multipliers (int): The number of multipliers in each cell
     """
 
-    def __init__(self, size=16, multipliers=64):
+    def __init__(self, batches=25, size=16, multipliers=64):
         self.multipliers = multipliers
         self.cells = torch.empty((size, multipliers))
-        self.accumulators = torch.empty(size)
+        self.accumulators = torch.empty(batches, size)
 
-    def load(self, weights):
+    def load(self, weights): # (size, multipliers)
         """Load the kernel weights into the array with zero padding if necessary"""
         weights = F.pad(weights, (0, self.multipliers-weights.size(1)), value=0)
         self.cells.copy_(weights)
 
-    def broadcast(self, weights):
+    def broadcast(self, weights): # (batches, multipliers)
         """Broadcasts weights to all MAC cells and multiplies them"""
-        weights = F.pad(weights, (0, self.multipliers-weights.size(0)), value=0)
-        self.accumulators.copy_(torch.sum(self.cells * weights, dim=1))
+        weights = F.pad(weights, (0, self.multipliers-weights.size(1)), value=0)
+        self.accumulators.copy_(weights @ self.cells.T)
 
 class SimConv2d(nn.Conv2d):
     """
@@ -38,7 +38,7 @@ class SimConv2d(nn.Conv2d):
     """
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1):
         super(SimConv2d, self).__init__(in_channels, out_channels, kernel_size, stride, padding, dilation)
-        self.mac_array = MACArray(size=out_channels, multipliers=64)
+        self.mac_array = MACArray(batches=25, size=out_channels, multipliers=64)
         self.output_shape = (0, 0, 0, 0)
 
     def load_kernels(self, kd, ky, kx): # e.g. (z, y, x)
@@ -47,7 +47,7 @@ class SimConv2d(nn.Conv2d):
 
     def atomic(self, input_data, depth, y, x):
         """Broadcast the input slice and multiply and accumulate for each cell"""
-        self.mac_array.broadcast(input_data[0, self.mac_array.multipliers*depth:self.mac_array.multipliers*(depth+1), y, x])
+        self.mac_array.broadcast(input_data[:, self.mac_array.multipliers*depth:self.mac_array.multipliers*(depth+1), y, x])
         return self.mac_array.accumulators
 
     def stripe(self, input_data, depth, ky, kx):
@@ -59,7 +59,7 @@ class SimConv2d(nn.Conv2d):
                 ix = ox * self.stride[1] + kx - self.padding[1]
                 if 0 <= iy and iy < input_data.shape[2] and \
                    0 <= ix and ix < input_data.shape[3]:
-                    result[0, :, oy, ox] = self.atomic(input_data, depth, iy, ix)
+                    result[:, :, oy, ox] = self.atomic(input_data, depth, iy, ix)
         return result
 
     def block(self, input_data, depth):
@@ -87,7 +87,7 @@ class SimConv2d(nn.Conv2d):
                              self.weight.shape[0],
                              int((self.padding[0] * 2 + input.shape[2] - (self.weight.shape[2] - 1) * self.dilation[0] - 1) / self.stride[0] + 1),
                              int((self.padding[1] * 2 + input.shape[3] - (self.weight.shape[3] - 1) * self.dilation[1] - 1) / self.stride[1] + 1))
-        out = torch.vmap(self.channel)(input)
+        out = self.channel(input)
         out += self.bias.view(1, -1, 1, 1)
         return out
     
@@ -110,7 +110,7 @@ class SimLinear(nn.Module):
 
     def forward(self, input):
         """Compute forward pass for the simulated linear layer"""
-        input = input.view(1, 1, -1)
+        input = input.view(input.shape[0], 1, 1, -1)
         out = self.conv(input)
-        out = out.view(1, -1)
+        out = out.view(out.shape[0], -1)
         return out

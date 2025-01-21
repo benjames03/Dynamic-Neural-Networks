@@ -106,14 +106,13 @@ def eval_submodel(loader):
 
             pred = model(X)
             total_acc += (pred.argmax(1) == y).sum().item()
-            if (i+1) % 250 == 0: print(f"Sample {i+1}/{2500}")
 
     total_acc /= len(loader.dataset)
     return total_acc
 
 # use mp.set_start_method("spawn")
 def eval_model_mp(num_loaders=4):
-    loaders = get_data_mp(batch_size=1, num_loaders=num_loaders)
+    loaders = get_data_mp(batch_size=25, num_loaders=num_loaders)
 
     print("Running", num_loaders, "threads")
     with mp.Pool(processes=num_loaders) as pool:
@@ -132,6 +131,7 @@ def eval_conv_layer():
     print(torch.equal(a, b),
             F.cosine_similarity(a.flatten(), b.flatten(), dim=0).item(),
             "mean dif -", torch.abs(a - b).mean().item())
+
 def eval_conv():
     paddings = [1]
     strides = [1]
@@ -184,14 +184,18 @@ def eval_linear_to_conv_model():
 if __name__ == "__main__":
     start = time.time()
 
-    # mp.set_start_method("spawn")
-    # accuracy = eval_model_mp(num_loaders=4)
-    eval_conv_layer()
+    mp.set_start_method("spawn")
+    accuracy = eval_model_mp(num_loaders=4)
 
     end = time.time()
     print(f"({end-start:.2f}s)")
 
 """
+batch_size = 1:
 4 threads: 1016.58s
 8 threads: 1080.94s
+
+batch_size = 25:
+4 threads: 128.51s
+8 threads: 350.96s
 """ 
