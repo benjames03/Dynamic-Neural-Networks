@@ -95,17 +95,18 @@ def eval_model(checkpoint=500):
     # torch.save(accuracies, "../results/conv_comp.pt")
 
 def eval_submodel(loader):
-    model = lenet.LeNet().to("cpu")
+    model = lenet.SimLeNet().to("cpu")
     model.load_state_dict(torch.load(f"../models/lenet.pth", weights_only=True))
     model.eval()
 
     total_acc = 0
     with torch.no_grad():
-        for X, y in loader:
+        for i, (X, y) in enumerate(loader):
             X, y = X.to("cpu"), y.to("cpu")
-            
+
             pred = model(X)
             total_acc += (pred.argmax(1) == y).sum().item()
+            if (i+1) % 250 == 0: print(f"Sample {i+1}/{2500}")
 
     total_acc /= len(loader.dataset)
     return total_acc
@@ -131,7 +132,6 @@ def eval_conv_layer():
     print(torch.equal(a, b),
             F.cosine_similarity(a.flatten(), b.flatten(), dim=0).item(),
             "mean dif -", torch.abs(a - b).mean().item())
-
 def eval_conv():
     paddings = [1]
     strides = [1]
@@ -183,7 +183,15 @@ def eval_linear_to_conv_model():
 
 if __name__ == "__main__":
     start = time.time()
-    mp.set_start_method("spawn")
-    accuracy = eval_model_mp(num_loaders=4)
+
+    # mp.set_start_method("spawn")
+    # accuracy = eval_model_mp(num_loaders=4)
+    eval_conv_layer()
+
     end = time.time()
-    print(f"Accuracy: {accuracy*100}% ({end-start:.2f}s)")
+    print(f"({end-start:.2f}s)")
+
+"""
+4 threads: 1016.58s
+8 threads: 1080.94s
+""" 

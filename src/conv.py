@@ -43,11 +43,11 @@ class SimConv2d(nn.Conv2d):
 
     def load_kernels(self, kd, ky, kx): # e.g. (z, y, x)
         """Cache each kernel slice into a MAC cell"""
-        self.mac_array.load(self.weight[:, 64*kd:64*(kd+1), ky, kx])
+        self.mac_array.load(self.weight[:, self.mac_array.multipliers*kd:self.mac_array.multipliers*(kd+1), ky, kx])
 
     def atomic(self, input_data, depth, y, x):
         """Broadcast the input slice and multiply and accumulate for each cell"""
-        self.mac_array.broadcast(input_data[0, 64*depth:64*(depth+1), y, x])
+        self.mac_array.broadcast(input_data[0, self.mac_array.multipliers*depth:self.mac_array.multipliers*(depth+1), y, x])
         return self.mac_array.accumulators
 
     def stripe(self, input_data, depth, ky, kx):
@@ -73,7 +73,7 @@ class SimConv2d(nn.Conv2d):
 
     def channel(self, input_data):
         """Compute a block for each depth in the cube"""
-        block_ops = int((input_data.shape[1] + 63) / 64)
+        block_ops = int((input_data.shape[1] + self.mac_array.multipliers-1) / self.mac_array.multipliers)
         blocks = torch.zeros(self.output_shape)
         for depth in range(block_ops):
             blocks += self.block(input_data, depth)

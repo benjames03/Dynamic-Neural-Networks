@@ -1,4 +1,6 @@
 Predicted time for n processes to compute 1000 sample inferences
+
+LeNet
 {
     1: 19.804565906524658, 
     2: 12.849165201187134, 
@@ -9,4 +11,13 @@ Predicted time for n processes to compute 1000 sample inferences
     12: 12.874559164047241, 
     14: 7.675485951559884, 
     16: 7.306961566209793
+}
+
+SimLeNet
+{
+    1: 245.02096557617188, 
+    2: 160.93619537353516, 
+    4: 88.14911842346191, 
+    6: 89.02858893076579, 
+    8: 88.89085674285889
 }
