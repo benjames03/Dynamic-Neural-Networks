@@ -81,15 +81,13 @@ class SimConv2d(nn.Conv2d):
 
     def conv2d(self, input): # input must be (1, d, h, w)
         """Compute a forward convolution pass"""
-        if input.shape[0] != 1:
-            raise ValueError("batch_size must be 1")
         if len(input.shape) == 3: 
             input = input.unsqueeze(0)
-        self.output_shape = (1,
+        self.output_shape = (input.shape[0],
                              self.weight.shape[0],
                              int((self.padding[0] * 2 + input.shape[2] - (self.weight.shape[2] - 1) * self.dilation[0] - 1) / self.stride[0] + 1),
                              int((self.padding[1] * 2 + input.shape[3] - (self.weight.shape[3] - 1) * self.dilation[1] - 1) / self.stride[1] + 1))
-        out = self.channel(input)
+        out = torch.vmap(self.channel)(input)
         out += self.bias.view(1, -1, 1, 1)
         return out
     
