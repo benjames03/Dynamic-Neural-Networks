@@ -101,20 +101,17 @@ def eval_submodel(loader):
 
     total_acc = 0
     with torch.no_grad():
-        for i, (X, y) in enumerate(loader):
+        for X, y in loader:
             X, y = X.to("cpu"), y.to("cpu")
-
+            
             pred = model(X)
-
             total_acc += (pred.argmax(1) == y).sum().item()
-            if (i+1) % 250 == 0:
-                print(f"Sample {i+1}/{len(loader)}")
 
     total_acc /= len(loader.dataset)
     return total_acc
 
 # use mp.set_start_method("spawn")
-def eval_model_mp(num_loaders=8):
+def eval_model_mp(num_loaders=4):
     loaders = get_data_mp(batch_size=1, num_loaders=num_loaders)
 
     print("Running", num_loaders, "threads")
@@ -187,6 +184,6 @@ def eval_linear_to_conv_model():
 if __name__ == "__main__":
     start = time.time()
     mp.set_start_method("spawn")
-    accuracy = eval_model_mp(num_loaders=8)
+    accuracy = eval_model_mp(num_loaders=4)
     end = time.time()
     print(f"Accuracy: {accuracy*100}% ({end-start:.2f}s)")
