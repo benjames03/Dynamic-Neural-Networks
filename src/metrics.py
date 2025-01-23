@@ -42,7 +42,7 @@ def summarise_fault_tests():
     files = [f for f in os.listdir(dirpath) if "summary" not in f]
     for filepath in files:
         df = pd.read_csv(dirpath + filepath, names=["accuracy", "time"])
-        results.append(f"{filepath} ({df.shape[0]} iters): {100*df['accuracy'].mean()}% ({df['time'].mean():.2f}s)")
+        results.append(f"{filepath} ({df.shape[0]} tests): {100*df['accuracy'].mean()}% ({df['time'].mean():.2f}s)")
     with open(dirpath + "summary.txt", "w") as file:
         for result in results:
             file.write(result + "\n")

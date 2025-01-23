@@ -96,7 +96,6 @@ class SimLeNet(nn.Module):
                 mult = random.randint(0, self.linear3.conv.weight.size(1)-1)
                 ker = random.randint(0, self.linear3.conv.weight.size(0)-1)
                 self.linear3.conv.weight[ker, mult, :, :] = (self.linear3.conv.weight[ker, mult, :, :].view(int32) | (1 << bit)).view(float32)
-        print("injected", faults, "faults")
 
     def forward(self, input):
         out = self.conv1(input)

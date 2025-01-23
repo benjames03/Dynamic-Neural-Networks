@@ -67,9 +67,11 @@ def append_record(faults, accuracy, time):
 if __name__ == "__main__":
     mp.set_start_method("spawn")
     loaders = get_data_mp(batch_size=25, num_loaders=4)
-    faults = 10
-    for i in range(10):
+    faults = 1
+    tests = 20
+    for i in range(tests):
         start = time.time()
         accuracy = full_inference(loaders, faults)
         stop = time.time()
         append_record(faults, accuracy, stop-start)
+        print(f"\r{i+1}/{tests}", end="")
