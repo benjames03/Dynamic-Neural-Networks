@@ -1,4 +1,6 @@
 import torch
+import os
+import pandas as pd
 
 # Function to calculate precision for each class
 def precision(conf_matrix):
@@ -22,13 +24,27 @@ def f1_score(precisions, recalls):
         f1s = 2 * (precisions * recalls) / (precisions + recalls + 1e-8)  # Adding epsilon to prevent division by zero
     return f1s
 
-model = None # load model
+def analyse():
+    model = None # load model
 
-precisions = precision(model.conf_matrix)
-recalls = recall(model.conf_matrix)
-f1s = f1_score(precisions, recalls)
+    precisions = precision(model.conf_matrix)
+    recalls = recall(model.conf_matrix)
+    f1s = f1_score(precisions, recalls)
 
-print(model.conf_matrix)
-print("Precision per class:", precisions)
-print("Recall per class:", recalls)
-print("F1 score per class:", f1s)
+    print(model.conf_matrix)
+    print("Precision per class:", precisions)
+    print("Recall per class:", recalls)
+    print("F1 score per class:", f1s)
+
+def summarise_fault_tests():
+    dirpath = "../results/faults/"
+    results = []
+    files = [f for f in os.listdir(dirpath) if "summary" not in f]
+    for filepath in files:
+        df = pd.read_csv(dirpath + filepath, names=["accuracy", "time"])
+        results.append(f"{filepath} ({df.shape[0]} iters): {100*df['accuracy'].mean()}% ({df['time'].mean():.2f}s)")
+    with open(dirpath + "summary.txt", "w") as file:
+        for result in results:
+            file.write(result + "\n")
+
+summarise_fault_tests()

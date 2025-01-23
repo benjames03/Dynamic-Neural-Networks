@@ -1,4 +1,5 @@
-from torch import nn
+import random
+from torch import nn, no_grad, int32, float32
 import conv
 
 class LeNet(nn.Module):
@@ -71,6 +72,31 @@ class SimLeNet(nn.Module):
             else:
                 new_state_dict[key] = value
         return super().load_state_dict(new_state_dict, strict, assign)
+    
+    def inject_faults(self, faults):
+        with no_grad():
+            for i in range(faults):
+                bit = random.randint(0, 31)
+                mult = random.randint(0, self.conv1.weight.size(1)-1)
+                ker = random.randint(0, self.conv1.weight.size(0)-1)
+                self.conv1.weight[ker, mult, :, :] = (self.conv1.weight[ker, mult, :, :].view(int32) | (1 << bit)).view(float32)
+                
+                mult = random.randint(0, self.conv2.weight.size(1)-1)
+                ker = random.randint(0, self.conv2.weight.size(0)-1)
+                self.conv2.weight[ker, mult, :, :] = (self.conv2.weight[ker, mult, :, :].view(int32) | (1 << bit)).view(float32)
+                
+                mult = random.randint(0, self.linear1.conv.weight.size(1)-1)
+                ker = random.randint(0, self.linear1.conv.weight.size(0)-1)
+                self.linear1.conv.weight[ker, mult, :, :] = (self.linear1.conv.weight[ker, mult, :, :].view(int32) | (1 << bit)).view(float32)
+                
+                mult = random.randint(0, self.linear2.conv.weight.size(1)-1)
+                ker = random.randint(0, self.linear2.conv.weight.size(0)-1)
+                self.linear2.conv.weight[ker, mult, :, :] = (self.linear2.conv.weight[ker, mult, :, :].view(int32) | (1 << bit)).view(float32)
+                
+                mult = random.randint(0, self.linear3.conv.weight.size(1)-1)
+                ker = random.randint(0, self.linear3.conv.weight.size(0)-1)
+                self.linear3.conv.weight[ker, mult, :, :] = (self.linear3.conv.weight[ker, mult, :, :].view(int32) | (1 << bit)).view(float32)
+        print("injected", faults, "faults")
 
     def forward(self, input):
         out = self.conv1(input)
