@@ -39,12 +39,12 @@ def analyse():
 def summarise_fault_tests():
     dirpath = "../results/faults/"
     results = []
-    files = [f for f in os.listdir(dirpath) if "summary" not in f]
+    files = ["0.txt", "1.txt"]
     for filepath in files:
-        df = pd.read_csv(dirpath + filepath, names=["accuracy", "time"])
-        results.append(f"{filepath} ({df.shape[0]} tests): {100*df['accuracy'].mean()}% ({df['time'].mean():.2f}s)")
+        df = pd.read_csv(dirpath + filepath, names=["accuracy", "margin"])
+        results.append(f"{filepath[:-4]} faults ({df.shape[0]} tests): {100*df['accuracy'].mean()}%, {df['margin'].mean()}\n")
     with open(dirpath + "summary.txt", "w") as file:
         for result in results:
-            file.write(result + "\n")
+            file.write(result)
 
 summarise_fault_tests()

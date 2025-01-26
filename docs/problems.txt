@@ -1,0 +1,2 @@
+injecting faults sometimes gives nan
+  caused by masking float32 values to special nan rep

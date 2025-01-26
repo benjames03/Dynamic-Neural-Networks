@@ -1,10 +1,12 @@
 import time
 import torch
 from torch.utils.data import DataLoader, Subset
+import torch.nn.functional as F
 import torch.multiprocessing as mp
 from torchvision import datasets
 from torchvision.transforms import ToTensor, Compose, Normalize
 import lenet
+import math
 
 DATASET_PATH = "../datasets/cifar10"
 MODEL_PATH = "../models/lenet.pth"
@@ -42,36 +44,43 @@ def eval_submodel(args):
     model.inject_faults(faults)
 
     model.eval()
-    total_acc = 0
+    total_acc, total_margin = 0, 0
     with torch.no_grad():
         for X, y in loader:
             X, y = X.to("cpu"), y.to("cpu")
 
             pred = model(X)
             total_acc += (pred.argmax(1) == y).sum().item()
-
+            if not torch.isnan(pred).any():
+                probs = F.softmax(pred, dim=1)
+                vals, _ = torch.topk(probs, 2, dim=1)
+                total_margin += torch.sum(vals[:, 0] - vals[:, 1]).item()
+        
     total_acc /= len(loader.dataset)
-    return total_acc
+    total_margin /= len(loader.dataset)
+    return [total_acc, total_margin]
 
 # use mp.set_start_method("spawn")
 def full_inference(loaders, faults):
     with mp.Pool(processes=len(loaders)) as pool:
         results = pool.map(eval_submodel, [(loader, faults) for loader in loaders])
-        mean_acc = sum(results) / len(results)
-    return mean_acc
+        mean_acc = sum(result[0] for result in results) / len(results)
+        mean_mar = sum(result[1] for result in results) / len(results)
+    return (mean_acc, mean_mar)
 
-def append_record(faults, accuracy, time):
+def append_record(faults, accuracy, margin):
     with open(RESULTS_PATH + str(faults) + ".txt", "a") as file:
-        file.write(f"{accuracy}, {time:.2f}\n")
+        file.write(f"{accuracy}, {margin}\n")
 
 if __name__ == "__main__":
     mp.set_start_method("spawn")
     loaders = get_data_mp(batch_size=25, num_loaders=4)
-    faults = 1
-    tests = 20
+    faults = 0
+    tests = 2
     for i in range(tests):
         start = time.time()
-        accuracy = full_inference(loaders, faults)
+        (accuracy, margin) = full_inference(loaders, faults)
+        append_record(faults, accuracy, margin)
         stop = time.time()
-        append_record(faults, accuracy, stop-start)
-        print(f"\r{i+1}/{tests}", end="")
+        print(f"\r{i+1}/{tests} tests ({stop-start:.2f}s)", end="")
+    print()
