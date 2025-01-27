@@ -6,7 +6,6 @@ import torch.multiprocessing as mp
 from torchvision import datasets
 from torchvision.transforms import ToTensor, Compose, Normalize
 import lenet
-import math
 
 DATASET_PATH = "../datasets/cifar10"
 MODEL_PATH = "../models/lenet.pth"
@@ -75,8 +74,8 @@ def append_record(faults, accuracy, margin):
 if __name__ == "__main__":
     mp.set_start_method("spawn")
     loaders = get_data_mp(batch_size=25, num_loaders=4)
-    faults = 0
-    tests = 2
+    faults = 2
+    tests = 10
     for i in range(tests):
         start = time.time()
         (accuracy, margin) = full_inference(loaders, faults)
