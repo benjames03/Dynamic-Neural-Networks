@@ -1,3 +1,6 @@
 0 faults (10 tests): 71.40%, 0.553
 1 faults (50 tests): -2.90%, -0.00145
 2 faults (50 tests): -7.26%, -0.0166
+3 faults (50 tests): -11.33%, -0.0282
+4 faults (30 tests): -10.90%, -0.0415
+5 faults (20 tests): -21.82%, -0.0694

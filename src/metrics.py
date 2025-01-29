@@ -38,7 +38,7 @@ def analyse():
 
 def summarise_fault_tests():
     dirpath = "../results/faults/"
-    base_fp, test_fps = "0.txt", ["1.txt", "2.txt"]
+    base_fp, test_fps = "0.txt", ["1.txt", "2.txt", "3.txt", "4.txt", "5.txt"]
 
     df = pd.read_csv(dirpath + base_fp, names=["accuracy", "margin"])
     base_acc, base_mar = df["accuracy"].mean(), df["margin"].mean()
