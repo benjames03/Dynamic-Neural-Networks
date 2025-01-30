@@ -73,7 +73,7 @@ def append_record(faults, accuracy, margin):
 
 if __name__ == "__main__":
     mp.set_start_method("spawn")
-    loaders = get_data_mp(batch_size=25, num_loaders=4)
+    loaders = get_data_mp(batch_size=50, num_loaders=4)
     faults = 2
     tests = 10
     for i in range(tests):

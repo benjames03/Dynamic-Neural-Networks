@@ -5,4 +5,5 @@
 4 faults (100 tests): -11.77%, -0.0315
 5 faults (100 tests): -18.47%, -0.062
 6 faults (100 tests): -18.07%, -0.042
-7 faults (20 tests): -28.70%, -0.0982
+7 faults (80 tests): -24.67%, -0.0748
+8 faults (100 tests): -25.35%, -0.0829
