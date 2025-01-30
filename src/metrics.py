@@ -37,8 +37,9 @@ def analyse():
     print("F1 score per class:", f1s)
 
 def summarise_fault_tests():
+    summary_fp = "../results/summary.txt"
     dirpath = "../results/faults/"
-    base_fn, test_fns = "0", [str(i) for i in range(1, 9)]
+    base_fn, test_fns = "0", [str(i) for i in range(1, 11)]
 
     df = pd.read_csv(dirpath + base_fn + ".txt", names=["accuracy", "margin"])
     base_acc, base_mar = df["accuracy"].mean(), df["margin"].mean()
@@ -46,7 +47,7 @@ def summarise_fault_tests():
     for num_faults in test_fns:
         df = pd.read_csv(dirpath + num_faults + ".txt", names=["accuracy", "margin"])
         results.append(f"{num_faults} faults ({df.shape[0]} tests): {100*(df['accuracy'].mean()-base_acc):+.2f}%, {df['margin'].mean()-base_mar:+.3g}\n")
-    with open(dirpath + "summary.txt", "w") as file:
+    with open(summary_fp, "w") as file:
         for result in results:
             file.write(result)
 
