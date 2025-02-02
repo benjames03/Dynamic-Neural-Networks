@@ -1,5 +1,4 @@
-import random
-from torch import nn, no_grad, int32, float32
+from torch import nn, no_grad, int32, float32, arange
 import conv
 
 class LeNet(nn.Module):
@@ -75,27 +74,23 @@ class SimLeNet(nn.Module):
     
     def inject_faults(self, faults):
         with no_grad():
-            for i in range(faults):
-                bit = random.randint(0, 31)
-                mult = random.randint(0, self.conv1.weight.size(1)-1)
-                ker = random.randint(0, self.conv1.weight.size(0)-1)
-                self.conv1.weight[ker, mult, :, :] = (self.conv1.weight[ker, mult, :, :].view(int32) | (1 << bit)).view(float32)
-                
-                mult = random.randint(0, self.conv2.weight.size(1)-1)
-                ker = random.randint(0, self.conv2.weight.size(0)-1)
-                self.conv2.weight[ker, mult, :, :] = (self.conv2.weight[ker, mult, :, :].view(int32) | (1 << bit)).view(float32)
-                
-                mult = random.randint(0, self.linear1.conv.weight.size(1)-1)
-                ker = random.randint(0, self.linear1.conv.weight.size(0)-1)
-                self.linear1.conv.weight[ker, mult, :, :] = (self.linear1.conv.weight[ker, mult, :, :].view(int32) | (1 << bit)).view(float32)
-                
-                mult = random.randint(0, self.linear2.conv.weight.size(1)-1)
-                ker = random.randint(0, self.linear2.conv.weight.size(0)-1)
-                self.linear2.conv.weight[ker, mult, :, :] = (self.linear2.conv.weight[ker, mult, :, :].view(int32) | (1 << bit)).view(float32)
-                
-                mult = random.randint(0, self.linear3.conv.weight.size(1)-1)
-                ker = random.randint(0, self.linear3.conv.weight.size(0)-1)
-                self.linear3.conv.weight[ker, mult, :, :] = (self.linear3.conv.weight[ker, mult, :, :].view(int32) | (1 << bit)).view(float32)
+            for fault in faults:
+                (ker, mult, bit) = fault
+                if mult < self.conv1.weight.shape[1] and ker < self.conv1.weight.shape[0]:
+                    w_kers = arange(ker, self.conv1.weight.shape[0], step=16)
+                    self.conv1.weight[w_kers, mult, :, :] = (self.conv1.weight[w_kers, mult, :, :].view(int32) | (1 << bit)).view(float32)
+                if mult < self.conv2.weight.shape[1] and ker < self.conv2.weight.shape[0]:
+                    w_kers = arange(ker, self.conv2.weight.shape[0], step=16)
+                    self.conv2.weight[w_kers, mult, :, :] = (self.conv2.weight[w_kers, mult, :, :].view(int32) | (1 << bit)).view(float32)
+                if mult < self.linear1.conv.weight.shape[1] and ker < self.linear1.conv.weight.shape[0]:
+                    w_kers = arange(ker, self.linear1.conv.weight.shape[0], step=16)
+                    self.linear1.conv.weight[w_kers, mult, :, :] = (self.linear1.conv.weight[w_kers, mult, :, :].view(int32) | (1 << bit)).view(float32)
+                if mult < self.linear2.conv.weight.shape[1] and ker < self.linear2.conv.weight.shape[0]:
+                    w_kers = arange(ker, self.linear2.conv.weight.shape[0], step=16)
+                    self.linear2.conv.weight[w_kers, mult, :, :] = (self.linear2.conv.weight[w_kers, mult, :, :].view(int32) | (1 << bit)).view(float32)
+                if mult < self.linear3.conv.weight.shape[1] and ker < self.linear3.conv.weight.shape[0]:
+                    w_kers = arange(ker, self.linear3.conv.weight.shape[0], step=16)
+                    self.linear3.conv.weight[w_kers, mult, :, :] = (self.linear3.conv.weight[w_kers, mult, :, :].view(int32) | (1 << bit)).view(float32)
 
     def forward(self, input):
         out = self.conv1(input)

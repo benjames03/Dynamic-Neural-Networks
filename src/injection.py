@@ -1,4 +1,5 @@
 import time
+import random
 import torch
 from torch.utils.data import DataLoader, Subset
 import torch.nn.functional as F
@@ -60,26 +61,29 @@ def eval_submodel(args):
     return [total_acc, total_margin]
 
 # use mp.set_start_method("spawn")
-def full_inference(loaders, faults):
+def full_inference(loaders, num_faults):
+    kernels, multipliers, bits = 16, 64, 32 #random.randint(0, kernels-1), random.randint(0, multipliers-1)
+    faults = [(1, 1, random.randint(0, bits-1)) for _ in range(num_faults)]
     with mp.Pool(processes=len(loaders)) as pool:
         results = pool.map(eval_submodel, [(loader, faults) for loader in loaders])
         mean_acc = sum(result[0] for result in results) / len(results)
         mean_mar = sum(result[1] for result in results) / len(results)
     return (mean_acc, mean_mar)
 
-def append_record(faults, accuracy, margin):
-    with open(RESULTS_PATH + str(faults) + ".txt", "a") as file:
+def append_record(num_faults, accuracy, margin):
+    with open(RESULTS_PATH + str(num_faults) + ".txt", "a") as file:
         file.write(f"{accuracy}, {margin}\n")
 
 if __name__ == "__main__":
     mp.set_start_method("spawn")
     loaders = get_data_mp(batch_size=50, num_loaders=4)
-    faults = 2
-    tests = 10
-    for i in range(tests):
+    num_faults = 10
+    num_tests = 1
+    for i in range(num_tests):
         start = time.time()
-        (accuracy, margin) = full_inference(loaders, faults)
-        append_record(faults, accuracy, margin)
+        (accuracy, margin) = full_inference(loaders, num_faults)
+        print(accuracy, margin)
+        # append_record(num_faults, accuracy, margin)
         stop = time.time()
-        print(f"\r{i+1}/{tests} tests ({stop-start:.2f}s)", end="")
+        print(f"\r{i+1}/{num_tests} tests ({stop-start:.2f}s)", end="")
     print()
