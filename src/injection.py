@@ -62,8 +62,8 @@ def eval_submodel(args):
 
 # use mp.set_start_method("spawn")
 def full_inference(loaders, num_faults):
-    kernels, multipliers, bits = 16, 64, 32 #random.randint(0, kernels-1), random.randint(0, multipliers-1)
-    faults = [(1, 1, random.randint(0, bits-1)) for _ in range(num_faults)]
+    kernels, multipliers, bits = 16, 64, 32
+    faults = [(random.randint(0, kernels-1), random.randint(0, multipliers-1), random.randint(0, bits-1)) for _ in range(num_faults)]
     with mp.Pool(processes=len(loaders)) as pool:
         results = pool.map(eval_submodel, [(loader, faults) for loader in loaders])
         mean_acc = sum(result[0] for result in results) / len(results)
@@ -77,12 +77,11 @@ def append_record(num_faults, accuracy, margin):
 if __name__ == "__main__":
     mp.set_start_method("spawn")
     loaders = get_data_mp(batch_size=50, num_loaders=4)
-    num_faults = 10
-    num_tests = 1
+    num_faults = 3
+    num_tests = 1000
     for i in range(num_tests):
         start = time.time()
         (accuracy, margin) = full_inference(loaders, num_faults)
-        print(accuracy, margin)
         # append_record(num_faults, accuracy, margin)
         stop = time.time()
         print(f"\r{i+1}/{num_tests} tests ({stop-start:.2f}s)", end="")

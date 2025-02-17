@@ -36,19 +36,20 @@ def analyse():
     print("Recall per class:", recalls)
     print("F1 score per class:", f1s)
 
-def summarise_fault_tests():
-    summary_fp = "../results/summary.txt"
-    dirpath = "../results/faults/"
-    base_fn, test_fns = "0", [str(i) for i in range(1, 11)]
+def summarise_fault_tests(fileout, dirpath):
+    files = sorted(os.listdir(dirpath))
+    base_fn, test_fns = files[0], files[1:]
 
-    df = pd.read_csv(dirpath + base_fn + ".txt", names=["accuracy", "margin"])
+    df = pd.read_csv(dirpath + base_fn, names=["accuracy", "margin"])
     base_acc, base_mar = df["accuracy"].mean(), df["margin"].mean()
-    results = [f"{base_fn} faults ({df.shape[0]} tests): {100*base_acc:.2f}%, {base_mar:.3g}\n"]
-    for num_faults in test_fns:
-        df = pd.read_csv(dirpath + num_faults + ".txt", names=["accuracy", "margin"])
-        results.append(f"{num_faults} faults ({df.shape[0]} tests): {100*(df['accuracy'].mean()-base_acc):+.2f}%, {df['margin'].mean()-base_mar:+.3g}\n")
-    with open(summary_fp, "w") as file:
+    results = [f"{base_fn[:-4]} faults ({df.shape[0]} tests): {100*base_acc:.2f}%, {base_mar:.3g}\n"]
+    for test_fn in test_fns:
+        df = pd.read_csv(dirpath + test_fn, names=["accuracy", "margin"])
+        results.append(f"{test_fn[:-4]} faults ({df.shape[0]} tests): {100*(df['accuracy'].mean()-base_acc):+.2f}%, {df['margin'].mean()-base_mar:+.3g}\n")
+    with open(fileout, "w") as file:
         for result in results:
             file.write(result)
 
-summarise_fault_tests()
+fileout = "../results/summaries/pre_only.txt"
+dirpath = "../results/faults_pre_only/"
+summarise_fault_tests(fileout, dirpath)
