@@ -10,7 +10,7 @@ import lenet
 
 DATASET_PATH = "../datasets/cifar10"
 MODEL_PATH = "../models/lenet.pth"
-RESULTS_PATH = "../results/faults/"
+RESULTS_PATH = "../results/faults_full/"
 
 def get_data_mp(batch_size, num_loaders):
     transform = Compose([
@@ -46,7 +46,7 @@ def eval_submodel(args):
     model.eval()
     total_acc, total_margin = 0, 0
     with torch.no_grad():
-        for X, y in loader:
+        for i, (X, y) in enumerate(loader):
             X, y = X.to("cpu"), y.to("cpu")
 
             pred = model(X)
@@ -55,6 +55,7 @@ def eval_submodel(args):
                 probs = F.softmax(pred, dim=1)
                 vals, _ = torch.topk(probs, 2, dim=1)
                 total_margin += torch.sum(vals[:, 0] - vals[:, 1]).item()
+            print(f"\r{i+1}/{len(loader)}", end="")
         
     total_acc /= len(loader.dataset)
     total_margin /= len(loader.dataset)
@@ -62,8 +63,8 @@ def eval_submodel(args):
 
 # use mp.set_start_method("spawn")
 def full_inference(loaders, num_faults):
-    kernels, multipliers, bits = 16, 64, 32
-    faults = [(random.randint(0, kernels-1), random.randint(0, multipliers-1), random.randint(0, bits-1)) for _ in range(num_faults)]
+    macs, multipliers, bits = 16, 64, 32
+    faults = [(random.randrange(macs), random.randrange(multipliers), random.randrange(bits)) for _ in range(num_faults)]
     with mp.Pool(processes=len(loaders)) as pool:
         results = pool.map(eval_submodel, [(loader, faults) for loader in loaders])
         mean_acc = sum(result[0] for result in results) / len(results)
@@ -76,13 +77,14 @@ def append_record(num_faults, accuracy, margin):
 
 if __name__ == "__main__":
     mp.set_start_method("spawn")
-    loaders = get_data_mp(batch_size=50, num_loaders=4)
-    num_faults = 3
-    num_tests = 1000
+    loaders = get_data_mp(batch_size=100, num_loaders=2)
+    num_faults = 1
+    num_tests = 1
     for i in range(num_tests):
         start = time.time()
         (accuracy, margin) = full_inference(loaders, num_faults)
         # append_record(num_faults, accuracy, margin)
         stop = time.time()
         print(f"\r{i+1}/{num_tests} tests ({stop-start:.2f}s)", end="")
+        print("\n", accuracy, margin)
     print()

@@ -1,4 +1,4 @@
-from torch import nn, no_grad, int32, float32, arange
+from torch import nn
 import conv
 
 class LeNet(nn.Module):
@@ -73,24 +73,11 @@ class SimLeNet(nn.Module):
         return super().load_state_dict(new_state_dict, strict, assign)
     
     def inject_faults(self, faults):
-        with no_grad():
-            for fault in faults:
-                (ker, mult, bit) = fault
-                if mult < self.conv1.weight.shape[1] and ker < self.conv1.weight.shape[0]:
-                    w_kers = arange(ker, self.conv1.weight.shape[0], step=16)
-                    self.conv1.weight[w_kers, mult, :, :] = (self.conv1.weight[w_kers, mult, :, :].view(int32) | (1 << bit)).view(float32)
-                if mult < self.conv2.weight.shape[1] and ker < self.conv2.weight.shape[0]:
-                    w_kers = arange(ker, self.conv2.weight.shape[0], step=16)
-                    self.conv2.weight[w_kers, mult, :, :] = (self.conv2.weight[w_kers, mult, :, :].view(int32) | (1 << bit)).view(float32)
-                if mult < self.linear1.conv.weight.shape[1] and ker < self.linear1.conv.weight.shape[0]:
-                    w_kers = arange(ker, self.linear1.conv.weight.shape[0], step=16)
-                    self.linear1.conv.weight[w_kers, mult, :, :] = (self.linear1.conv.weight[w_kers, mult, :, :].view(int32) | (1 << bit)).view(float32)
-                if mult < self.linear2.conv.weight.shape[1] and ker < self.linear2.conv.weight.shape[0]:
-                    w_kers = arange(ker, self.linear2.conv.weight.shape[0], step=16)
-                    self.linear2.conv.weight[w_kers, mult, :, :] = (self.linear2.conv.weight[w_kers, mult, :, :].view(int32) | (1 << bit)).view(float32)
-                if mult < self.linear3.conv.weight.shape[1] and ker < self.linear3.conv.weight.shape[0]:
-                    w_kers = arange(ker, self.linear3.conv.weight.shape[0], step=16)
-                    self.linear3.conv.weight[w_kers, mult, :, :] = (self.linear3.conv.weight[w_kers, mult, :, :].view(int32) | (1 << bit)).view(float32)
+        self.conv1.inject_faults(faults)
+        self.conv2.inject_faults(faults)
+        self.linear1.conv.inject_faults(faults)
+        self.linear2.conv.inject_faults(faults)
+        self.linear3.conv.inject_faults(faults)
 
     def forward(self, input):
         out = self.conv1(input)

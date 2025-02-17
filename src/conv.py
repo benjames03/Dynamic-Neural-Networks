@@ -14,6 +14,9 @@ class MACArray:
         self.multipliers = multipliers
         self.cells = torch.empty((size, multipliers))
         self.accumulators = torch.empty(batches, size)
+        self.fault_macs = []
+        self.fault_mults = []
+        self.fault_masks = []
 
     def load(self, weights): # (size, multipliers)
         """Load the kernel weights into the array with zero padding if necessary"""
@@ -22,8 +25,11 @@ class MACArray:
 
     def broadcast(self, weights): # (batches, multipliers)
         """Broadcasts weights to all MAC cells and multiplies them"""
-        weights = F.pad(weights, (0, self.multipliers-weights.size(1)), value=0)
-        self.accumulators.copy_(weights @ self.cells.T)
+        padded_weights = F.pad(weights, (0, self.multipliers-weights.size(1)), value=0)
+        inter_weights = padded_weights[:, :, None] * self.cells.T[None, :, :]
+        if (self.fault_macs != []):
+            inter_weights[:, self.fault_mults, self.fault_macs] = (inter_weights[:, self.fault_mults, self.fault_macs].view(torch.int32) | (self.fault_masks)).view(torch.float32)
+        self.accumulators.copy_(inter_weights.sum(dim=1))
 
 class SimConv2d(nn.Conv2d):
     """
@@ -38,8 +44,26 @@ class SimConv2d(nn.Conv2d):
     """
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1):
         super(SimConv2d, self).__init__(in_channels, out_channels, kernel_size, stride, padding, dilation)
-        self.mac_array = MACArray(batches=50, size=out_channels, multipliers=64)
+        self.mac_array = MACArray(batches=100, size=out_channels, multipliers=64)
         self.output_shape = (0, 0, 0, 0)
+    
+    def inject_faults(self, faults):
+        fault_macs, fault_mults, fault_masks = [], [], []
+        for (macu, mult, bit) in faults:
+            if mult < self.weight.shape[1] and macu < self.weight.shape[0]:
+                for mac in range(macu, self.weight.shape[0], 16):
+                    fault_macs.append(mac)
+                    fault_mults.append(mult)
+                    fault_masks.append(1 << bit)
+        fault_macs = torch.tensor(fault_macs, dtype=torch.int32)
+        fault_mults = torch.tensor(fault_mults, dtype=torch.int32)
+        fault_masks = torch.tensor(fault_masks, dtype=torch.int32)
+        with torch.no_grad():
+            self.weight[fault_macs, fault_mults, :, :] = (self.weight[fault_macs, fault_mults, :, :].view(torch.int32) | fault_masks.view(-1, 1, 1).expand(-1, self.weight.shape[2], self.weight.shape[3])).view(torch.float32)
+
+        self.mac_array.fault_macs = fault_macs
+        self.mac_array.fault_mults = fault_mults
+        self.mac_array.fault_masks = fault_masks.expand(self.mac_array.accumulators.shape[0], -1)
 
     def load_kernels(self, kd, ky, kx): # e.g. (z, y, x)
         """Cache each kernel slice into a MAC cell"""

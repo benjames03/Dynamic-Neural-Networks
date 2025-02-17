@@ -1,4 +1,5 @@
 import time
+import random
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, Subset
@@ -121,7 +122,7 @@ def eval_model_mp(num_loaders=4):
         return mean_acc
 
 def eval_conv_layer():
-    input_cube = torch.rand((32, 3, 32, 32))
+    input_cube = torch.rand((50, 3, 32, 32))
     simulated = conv.SimConv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
     benchmark = nn.Conv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
     benchmark.weight = simulated.weight
@@ -131,6 +132,28 @@ def eval_conv_layer():
     print(torch.equal(a, b),
             F.cosine_similarity(a.flatten(), b.flatten(), dim=0).item(),
             "mean dif -", torch.abs(a - b).mean().item())
+    
+def eval_faulty_conv_layer():
+    num_faults = 1
+    macs, multipliers, bits = 16, 3, 32
+    faults = [(random.randrange(macs), random.randrange(multipliers), random.randrange(bits)) for _ in range(num_faults)]
+    
+    input_cube = torch.rand((50, 3, 32, 32))
+    simulated = conv.SimConv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
+    benchmark = nn.Conv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
+    benchmark.weight = simulated.weight
+    benchmark.bias = simulated.bias
+
+    a = simulated(input_cube)
+    b = benchmark(input_cube)
+    print(torch.equal(a, b),
+            F.cosine_similarity(a.flatten(), b.flatten(), dim=0).item(),
+            "mean dif -", torch.abs(a - b).mean().item())
+    simulated.inject_faults(faults)
+    c = simulated(input_cube)
+    print(torch.equal(c, b),
+            F.cosine_similarity(c.flatten(), b.flatten(), dim=0).item(),
+            "mean dif -", torch.abs(c - b).mean().item())
 
 def eval_conv():
     paddings = [1]
@@ -184,18 +207,19 @@ def eval_linear_to_conv_model():
 if __name__ == "__main__":
     start = time.time()
 
-    mp.set_start_method("spawn")
-    accuracy = eval_model_mp(num_loaders=4)
+    # mp.set_start_method("spawn")
+    # accuracy = eval_model_mp(num_loaders=4)
+
+    eval_faulty_conv_layer()
+    # a = torch.rand((50, 64))
+    # b = torch.rand((16, 64))
+    # c = a[:,:,None] * b.T[None,:,:]
+    # print(c.shape)
+    # m = 2
+    # s = 3
+    # c[:, m, s] = (c[:, m, s].view(torch.int32) | (1 << 3)).view(torch.float32)
+    # r = c.sum(dim=1)
+    # print(r.shape)
 
     end = time.time()
     print(f"({end-start:.2f}s)")
-
-"""
-batch_size = 1:
-4 threads: 1016.58s
-8 threads: 1080.94s
-
-batch_size = 25:
-4 threads: 128.51s
-8 threads: 350.96s
-""" 
