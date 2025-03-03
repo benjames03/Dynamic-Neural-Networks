@@ -135,25 +135,54 @@ def eval_conv_layer():
     
 def eval_faulty_conv_layer():
     num_faults = 1
-    macs, multipliers, bits = 16, 3, 32
-    faults = [(random.randrange(macs), random.randrange(multipliers), random.randrange(bits)) for _ in range(num_faults)]
+    macs, multipliers, bits = 16, 64, 32
+    faults = [(random.randrange(macs), 2, 31) for _ in range(num_faults)]
+    # faults = [(random.randrange(macs), random.randrange(multipliers), random.randrange(bits)) for _ in range(num_faults)]
+    print(faults)
     
     input_cube = torch.rand((50, 3, 32, 32))
-    simulated = conv.SimConv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
     benchmark = nn.Conv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
-    benchmark.weight = simulated.weight
-    benchmark.bias = simulated.bias
+    simulated_free = conv.SimConv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
+    simulated_faulty = conv.SimConv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
 
-    a = simulated(input_cube)
-    b = benchmark(input_cube)
+    simulated_faulty.weight = benchmark.weight
+    simulated_faulty.bias = benchmark.bias
+    simulated_free.weight = benchmark.weight
+    simulated_free.bias = benchmark.bias
+    simulated_faulty.inject_faults(faults)
+
+    a = benchmark(input_cube)
+    b = simulated_free(input_cube)
+    c = simulated_faulty(input_cube)
     print(torch.equal(a, b),
             F.cosine_similarity(a.flatten(), b.flatten(), dim=0).item(),
-            "mean dif -", torch.abs(a - b).mean().item())
-    simulated.inject_faults(faults)
-    c = simulated(input_cube)
-    print(torch.equal(c, b),
-            F.cosine_similarity(c.flatten(), b.flatten(), dim=0).item(),
-            "mean dif -", torch.abs(c - b).mean().item())
+            "max err -", torch.max(a - b).mean().item())
+    print(torch.equal(a, c),
+            F.cosine_similarity(a.flatten(), c.flatten(), dim=0).item(),
+            "max err -", torch.max(a - c).mean().item())
+
+def record_bit_errors():
+    output_file = "../results/bit_pos_test.txt"
+    results = []
+    for i in range(30):
+        num_faults = 1
+        macs, multipliers, bits = 16, 64, 32
+        faults = [(3, 2, i) for _ in range(num_faults)]
+        # faults = [(random.randrange(macs), random.randrange(multipliers), random.randrange(bits)) for _ in range(num_faults)]
+        # print(faults)
+        
+        input_cube = torch.rand((50, 3, 32, 32))
+        benchmark = nn.Conv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
+        simulated_faulty = conv.SimConv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
+
+        simulated_faulty.weight = benchmark.weight
+        simulated_faulty.bias = benchmark.bias
+        simulated_faulty.inject_faults(faults)
+
+        a = benchmark(input_cube)
+        c = simulated_faulty(input_cube)
+        with open(output_file, "a") as file:
+            file.write(f"{i}, {torch.equal(a, c)}, {F.cosine_similarity(a.flatten(), c.flatten(), dim=0).item()}, max err - {torch.max(a - c).mean().item()}\n")
 
 def eval_conv():
     paddings = [1]
@@ -211,15 +240,15 @@ if __name__ == "__main__":
     # accuracy = eval_model_mp(num_loaders=4)
 
     eval_faulty_conv_layer()
-    # a = torch.rand((50, 64))
-    # b = torch.rand((16, 64))
-    # c = a[:,:,None] * b.T[None,:,:]
-    # print(c.shape)
-    # m = 2
-    # s = 3
-    # c[:, m, s] = (c[:, m, s].view(torch.int32) | (1 << 3)).view(torch.float32)
-    # r = c.sum(dim=1)
-    # print(r.shape)
+    # val = torch.tensor(0.3000048, dtype=torch.float32)
+    # int_val = val.view(torch.int32)
+    # mask = torch.tensor((1 << 30), dtype=torch.int32)
+    # int_res = int_val | mask
+    # res = int_res.view(torch.float32)
+    # print(format(int_val.item(), '032b'))
+    # print(format(mask.item(), '032b'))
+    # print(format(int_res.item(), '032b'))
+    # print(res)
 
     end = time.time()
     print(f"({end-start:.2f}s)")

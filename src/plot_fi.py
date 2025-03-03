@@ -2,6 +2,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pandas as pd
 
 def get_data(dirpath):
     files = os.listdir(dirpath)
@@ -70,5 +71,29 @@ def strip_plot(dirpath):
     plt.tight_layout()
     plt.show()
 
-dirpath = "../results/faults/"
-violin_plot(dirpath)
+def bit_pos_err(dirpath):
+    df = pd.read_csv(dirpath, names=["index", "same", "sim", "error"])
+    df = df.drop(columns=["same"])
+    df["sim"] = df["sim"].astype(float)
+    df["error"] = df["error"].str.replace("max err - ", "").astype(float)
+    print(df)
+
+    fig, ax1 = plt.subplots(figsize=(10, 5))
+    ax1.plot(df["index"], df["sim"], color="blue", label="Similarity")
+    ax1.set_xlabel("Bit position")
+    ax1.set_ylabel("Similarity", color="blue")
+    ax1.tick_params(axis="y", labelcolor="blue")
+    ax2 = ax1.twinx()
+    ax2.plot(df["index"], df["error"], color="red", label="Max Error")
+    ax2.set_xlabel("Bit position")
+    ax2.set_ylabel("Max Error", color="red")
+    ax2.tick_params(axis="y", labelcolor="red")
+
+    plt.title("Error over bit positions")
+    plt.legend()
+    plt.show()
+
+dirpath = "../results/faults_ubiq/"
+box_plot(dirpath)
+
+# bit_pos_err("../results/bit_pos_test.txt")

@@ -39,9 +39,13 @@ def get_data_mp(batch_size, num_loaders):
 
 def eval_submodel(args):
     loader, faults = args
-    model = lenet.SimLeNet().to("cpu")
-    model.load_state_dict(torch.load(MODEL_PATH, weights_only=True))
-    model.inject_faults(faults)
+    if all(fault[1] > 29 for fault in faults):
+        model = lenet.LeNet().to("cpu")
+        model.load_state_dict(torch.load(MODEL_PATH, weights_only=True))
+    else:
+        model = lenet.SimLeNet().to("cpu")
+        model.load_state_dict(torch.load(MODEL_PATH, weights_only=True))
+        model.inject_faults(faults)
 
     model.eval()
     total_acc, total_margin = 0, 0
@@ -64,27 +68,38 @@ def eval_submodel(args):
 # use mp.set_start_method("spawn")
 def full_inference(loaders, num_faults):
     macs, multipliers, bits = 16, 64, 32
-    faults = [(random.randrange(macs), random.randrange(multipliers), random.randrange(bits)) for _ in range(num_faults)]
+    # faults = [(random.randrange(macs), random.randrange(multipliers), random.randrange(bits)) for _ in range(num_faults)]
+    faults = [(random.randrange(macs), 2, 31) for _ in range(num_faults)]
+    print(f"Faults: {faults}")
     with mp.Pool(processes=len(loaders)) as pool:
         results = pool.map(eval_submodel, [(loader, faults) for loader in loaders])
         mean_acc = sum(result[0] for result in results) / len(results)
         mean_mar = sum(result[1] for result in results) / len(results)
-    return (mean_acc, mean_mar)
+    return (mean_acc, mean_mar, faults)
 
-def append_record(num_faults, accuracy, margin):
+def append_record(num_faults, accuracy, margin, faults):
     with open(RESULTS_PATH + str(num_faults) + ".txt", "a") as file:
-        file.write(f"{accuracy}, {margin}\n")
+        file.write(f"{accuracy}, {margin}, {str(faults).replace("), (", ")-(").replace(",", "")}\n")
 
 if __name__ == "__main__":
     mp.set_start_method("spawn")
-    loaders = get_data_mp(batch_size=100, num_loaders=2)
+    loaders = get_data_mp(batch_size=500, num_loaders=2)
     num_faults = 1
-    num_tests = 1
+    num_tests = 100
     for i in range(num_tests):
         start = time.time()
-        (accuracy, margin) = full_inference(loaders, num_faults)
-        # append_record(num_faults, accuracy, margin)
+        (accuracy, margin, faults) = full_inference(loaders, num_faults)
+        # append_record(num_faults, accuracy, margin, faults)
         stop = time.time()
         print(f"\r{i+1}/{num_tests} tests ({stop-start:.2f}s)", end="")
-        print("\n", accuracy, margin)
     print()
+
+"""
+1 fault, 2 processes
+batch_size (est time):
+    50 ~ 240s
+   100 ~ 141s
+   200 ~ 93s
+   500 ~ 66s
+  1000 ~ 74s
+"""
