@@ -44,7 +44,7 @@ class SimConv2d(nn.Conv2d):
     """
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1):
         super(SimConv2d, self).__init__(in_channels, out_channels, kernel_size, stride, padding, dilation)
-        self.mac_array = MACArray(batches=50, size=out_channels, multipliers=64)
+        self.mac_array = MACArray(batches=500, size=out_channels, multipliers=64)
         self.output_shape = (0, 0, 0, 0)
     
     def inject_faults(self, faults):

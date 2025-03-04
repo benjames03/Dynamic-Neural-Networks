@@ -10,7 +10,7 @@ import lenet
 
 DATASET_PATH = "../datasets/cifar10"
 MODEL_PATH = "../models/lenet.pth"
-RESULTS_PATH = "../results/faults_full/"
+RESULTS_PATH = "../results/faults_output/"
 
 def get_data_mp(batch_size, num_loaders):
     transform = Compose([
@@ -68,9 +68,9 @@ def eval_submodel(args):
 # use mp.set_start_method("spawn")
 def full_inference(loaders, num_faults):
     macs, multipliers, bits = 16, 64, 32
-    # faults = [(random.randrange(macs), random.randrange(multipliers), random.randrange(bits)) for _ in range(num_faults)]
-    faults = [(random.randrange(macs), 2, 31) for _ in range(num_faults)]
-    print(f"Faults: {faults}")
+    faults = [(random.randrange(macs), random.randrange(multipliers), random.randrange(bits)) for _ in range(num_faults)]
+    # faults = [(random.randrange(macs), 2, 31) for _ in range(num_faults)]
+    # print(f"Faults: {faults}")
     with mp.Pool(processes=len(loaders)) as pool:
         results = pool.map(eval_submodel, [(loader, faults) for loader in loaders])
         mean_acc = sum(result[0] for result in results) / len(results)
@@ -79,20 +79,19 @@ def full_inference(loaders, num_faults):
 
 def append_record(num_faults, accuracy, margin, faults):
     with open(RESULTS_PATH + str(num_faults) + ".txt", "a") as file:
-        file.write(f"{accuracy}, {margin}, {str(faults).replace("), (", ")-(").replace(",", "")}\n")
+        file.write(f'{accuracy}, {margin}, {str(faults).replace("), (", ")-(").replace(",", "")}\n')
 
 if __name__ == "__main__":
     mp.set_start_method("spawn")
     loaders = get_data_mp(batch_size=500, num_loaders=2)
     num_faults = 1
-    num_tests = 100
+    num_tests = 40
     for i in range(num_tests):
         start = time.time()
         (accuracy, margin, faults) = full_inference(loaders, num_faults)
-        # append_record(num_faults, accuracy, margin, faults)
+        append_record(num_faults, accuracy, margin, faults)
         stop = time.time()
-        print(f"\r{i+1}/{num_tests} tests ({stop-start:.2f}s)", end="")
-    print()
+        print(f"\r{i+1}/{num_tests} tests ({stop-start:.2f}s)")
 
 """
 1 fault, 2 processes
