@@ -9,7 +9,7 @@ from torchvision import datasets
 from torchvision.transforms import ToTensor, Compose, Normalize
 import lenet, conv
 
-DATASET_PATH = "../../datasets/cifar10"
+DATASET_PATH = "../datasets/cifar10"
 MODELS_PATH = "../models/"
 
 def get_data(batch_size):
@@ -53,14 +53,22 @@ def get_data_mp(batch_size, num_loaders):
     return loaders
 
 def load_lenet(simulating=False):
-    if simulating:
-        model = lenet.SimLeNet().to("cpu")
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
     else:
-        model = lenet.LeNet().to("cpu")
+        device = torch.device("cpu")
+    if simulating:
+        model = lenet.SimLeNet().to(device)
+    else:
+        model = lenet.LeNet().to(device)
     model.load_state_dict(torch.load(f"../models/lenet.pth", weights_only=True))
     return model
 
 def eval_model(checkpoint=500):
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
     loader = get_data(batch_size=1)
     loss_fn = nn.CrossEntropyLoss()
 
@@ -75,7 +83,7 @@ def eval_model(checkpoint=500):
         test_loss, total_acc = 0, 0
         with torch.no_grad():
             for i, (X, y) in enumerate(loader):
-                X, y = X.to("cpu"), y.to("cpu")
+                X, y = X.to(device), y.to(device)
 
                 pred = model(X)
 
@@ -96,14 +104,18 @@ def eval_model(checkpoint=500):
     # torch.save(accuracies, "../results/conv_comp.pt")
 
 def eval_submodel(loader):
-    model = lenet.SimLeNet().to("cpu")
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+    model = lenet.SimLeNet().to(device)
     model.load_state_dict(torch.load(f"../models/lenet.pth", weights_only=True))
     model.eval()
 
     total_acc = 0
     with torch.no_grad():
         for i, (X, y) in enumerate(loader):
-            X, y = X.to("cpu"), y.to("cpu")
+            X, y = X.to(device), y.to(device)
 
             pred = model(X)
             total_acc += (pred.argmax(1) == y).sum().item()
@@ -140,7 +152,6 @@ def eval_bit_flips():
     mask1 = torch.tensor(2**bit, dtype=torch.int32)
     mask0 = ~mask1
     print("Bit    =", bit)
-    # print("Number =", bin(num_i))
     print("1-Mask =", format(mask1 & 0xffffffff, "032b"))
     print("0-Mask =", format(mask0 & 0xffffffff, "032b"))
 
@@ -192,7 +203,7 @@ def eval_faulty_conv_layer():
     # print(torch.norm(a - c, p=2))
 
 def record_bit_errors():
-    output_file = "../results/bit_pos_test.txt"
+    output_file = "../results/bit_pos_test_0.txt"
     results = []
     macs, multipliers, bits = random.randrange(16), random.randrange(3), 32
     num_faults = 1
@@ -205,7 +216,7 @@ def record_bit_errors():
 
         simulated_faulty.weight = benchmark.weight
         simulated_faulty.bias = benchmark.bias
-        simulated_faulty.inject_faults(faults)
+        simulated_faulty.inject_faults(faults, 0, "out")
 
         a = benchmark(input_cube)
         c = simulated_faulty(input_cube)
@@ -252,11 +263,15 @@ def eval_linear_to_conv_layer():
                         "mean dif -", torch.abs(output1 - output2).mean())
 
 def eval_linear_to_conv_model():
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
     loader = get_data(batch_size=1)
     model = load_lenet(True)
     with torch.no_grad():
         for X, y in loader:
-            X, y = X.to("cpu"), y.to("cpu")
+            X, y = X.to(device), y.to(device)
             pred = model(X)
             # print((pred.argmax(1) == y).sum().item())
             break

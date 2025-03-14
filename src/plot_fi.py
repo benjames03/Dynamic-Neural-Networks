@@ -135,31 +135,35 @@ def dist_plot(dirpath):
     
 
 def bit_pos_err(dirpath):
-    df = pd.read_csv(dirpath, names=["index", "same", "sim", "error"])
-    df = df.drop(columns=["same"])
-    df["sim"] = df["sim"].astype(float)
-    df["error"] = df["error"].str.replace("max err - ", "").astype(float)
-    n = df["index"].value_counts().mean()
-    df = df.groupby("index").mean()
+    addends = ["0.txt", "1.txt"]
+    dfs = [None, None]
 
-    fig, ax1 = plt.subplots(figsize=(10, 5))
-    ax1.plot(df.index, df["sim"], color="blue", label="Similarity")
-    ax1.set_xlabel("Bit position")
-    ax1.set_ylabel("Similarity", color="blue")
-    ax1.tick_params(axis="y", labelcolor="blue")
+    fig, axs = plt.subplots(1, len(addends), figsize=(15, 5))
 
-    ax2 = ax1.twinx()
-    ax2.grid(True)
-    ax2.plot(df.index, df["error"], color="red", label="Max Error")
-    ax2.set_xlabel("Bit position")
-    ax2.set_ylabel("Max Error", color="red")
-    ax2.tick_params(axis="y", labelcolor="red")
+    for i in range(len(addends)):
+        dfs[i] = pd.read_csv(dirpath + addends[i], names=["index", "same", "sim", "error"])
+        dfs[i] = dfs[i].drop(columns=["same"])
+        dfs[i]["sim"] = dfs[i]["sim"].astype(float)
+        dfs[i]["error"] = dfs[i]["error"].str.replace("max err - ", "").astype(float)
+        n = dfs[i]["index"].value_counts().mean()
+        dfs[i] = dfs[i].groupby("index").mean()
 
-    plt.title(f"Error and Cosine similarity over bit position ({int(n)} tests)")
+        axs[i].plot(dfs[i].index, dfs[i]["sim"], color="blue", label="Similarity")
+        axs[i].set_xlabel("Bit position")
+        axs[i].set_ylabel("Similarity", color="blue")
+
+        ax2 = axs[i].twinx()
+        ax2.grid(True)
+        ax2.plot(dfs[i].index, dfs[i]["error"], color="red", label="Max Error")
+        ax2.set_xlabel("Bit position")
+        ax2.set_ylabel("Max Error", color="red")
+
+    axs[0].set_title(f"Error and Cosine similarity over bit position ({int(n)} tests, set 0)")
+    axs[1].set_title(f"Error and Cosine similarity over bit position ({int(n)} tests, set 1)")
     plt.legend()
     plt.show()
 
-dirpath = "../results/faults_output/"
-hist_plot(dirpath)
+# dirpath = "../results/faults_output/"
+# hist_plot(dirpath)
 
-# bit_pos_err("../results/bit_pos_test.txt")
+bit_pos_err("../results/bit_pos_test_")

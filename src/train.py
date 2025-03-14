@@ -1,6 +1,7 @@
 import sys
 import time
 import numpy as np
+import torch
 from torch import nn, no_grad, float, save, optim
 from torch.utils.data import DataLoader
 from torchvision import datasets
@@ -44,10 +45,14 @@ def get_data(batch_size):
     return train_dataloader, test_dataloader
 
 def train(dataloader, model, loss_function, optimizer):
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
     model.train()
     train_loss, train_acc = 0, 0
     for _, (X, y) in enumerate(dataloader):
-        X, y = X.to("cpu"), y.to("cpu")
+        X, y = X.to(device), y.to(device)
         optimizer.zero_grad()
 
         pred = model(X)
@@ -64,11 +69,15 @@ def train(dataloader, model, loss_function, optimizer):
     print(f"Train Accuracy: {(100*train_acc):>0.1f}%, Train loss: {train_loss:>8f}")
 
 def test(dataloader, model, loss_function):
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
     model.eval()
     test_loss, test_acc = 0, 0
     with no_grad():
         for X, y in dataloader:
-            X, y = X.to("cpu"), y.to("cpu")
+            X, y = X.to(device), y.to(device)
 
             pred = model(X)
             loss = loss_function(pred, y)

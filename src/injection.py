@@ -12,6 +12,9 @@ DATASET_PATH = "../datasets/cifar10"
 MODEL_PATH = "../models/lenet.pth"
 RESULTS_PATH = "../results/faults_output/"
 
+float_type = torch.float32 # torch.float32 or torch.float16
+torch.set_default_dtype(float_type)
+
 def get_data_mp(batch_size, num_loaders):
     transform = Compose([
         ToTensor(),
@@ -38,20 +41,25 @@ def get_data_mp(batch_size, num_loaders):
     return loaders
 
 def eval_submodel(args):
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
     loader, faults, set, method = args
     if all(fault[1] > 29 for fault in faults):
-        model = lenet.LeNet().to("cpu")
+        model = lenet.LeNet().to(device)
         model.load_state_dict(torch.load(MODEL_PATH, weights_only=True))
     else:
-        model = lenet.SimLeNet().to("cpu")
+        model = lenet.SimLeNet().to(device)
         model.load_state_dict(torch.load(MODEL_PATH, weights_only=True))
         model.inject_faults(faults, set, method)
+        model.to(float_type)
 
     model.eval()
     total_acc, total_margin = 0, 0
     with torch.no_grad():
         for i, (X, y) in enumerate(loader):
-            X, y = X.to("cpu"), y.to("cpu")
+            X, y = X.to(device), y.to(device)
 
             pred = model(X)
             total_acc += (pred.argmax(1) == y).sum().item()

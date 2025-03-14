@@ -30,31 +30,51 @@ def get_data(batch_size):
     return DataLoader(test_data, batch_size=batch_size, shuffle=True)
 
 def load_lenet():
-    model = lenet.LeNet().to("cpu")
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+    model = lenet.LeNet().to(device)
     model.load_state_dict(torch.load(f"../models/lenet.pth", weights_only=True))
     return model
 
 def load_resnet9():
-    model = resnet.ResNet9().to("cpu")
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+    model = resnet.ResNet9().to(device)
     model.load_state_dict(torch.load(f"../models/resnet9.pth", weights_only=True))
     return model
 
 def load_resnet18():
-    model = resnet.ResNet18().to("cpu")
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+    model = resnet.ResNet18().to(device)
     model.load_state_dict(torch.load(f"../models/resnet18.pth", weights_only=True))
     return model
 
 def load_resnet20():
-    model = resnet.ResNet20().to("cpu")
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+    model = resnet.ResNet20().to(device)
     model.load_state_dict(torch.load(f"../models/resnet20.pth", weights_only=True))
     return model
 
 def test(dataloader, model, loss_fn, threshold):
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
     model.eval()
     test_loss, correct = 0, 0
     with torch.no_grad():
         for X, y in dataloader:
-            X, y = X.to("cpu"), y.to("cpu")
+            X, y = X.to(device), y.to(device)
 
             pred = model(X, threshold=threshold, labels=y)
 
@@ -84,9 +104,14 @@ data = np.zeros(2, dtype=[
 data[0]["thresholds"] = np.linspace(0, 1, n)
 data[1]["thresholds"] = np.linspace(0, 1, n)
 
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+else:
+    device = torch.device("cpu")
+
 for i, resnet in enumerate(resnets):
     print("---------------------------")
-    model = big_little.Model(lenet, resnet).to("cpu")
+    model = big_little.Model(lenet, resnet).to(device)
     for j, threshold in enumerate(data[i]["thresholds"]):
         go = time.time()
 
