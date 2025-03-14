@@ -37,7 +37,7 @@ def analyse():
     print("F1 score per class:", f1s)
 
 def summarise_fault_tests(fileout, dirpath):
-    files = sorted(os.listdir(dirpath))
+    files = sorted(os.listdir(dirpath), key=lambda fn: int(fn[:-4]))
     base_fn, test_fns = files[0], files[1:]
 
     df = pd.read_csv(dirpath + base_fn, names=["accuracy", "margin", "faults"])

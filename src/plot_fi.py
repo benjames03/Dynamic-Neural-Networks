@@ -3,19 +3,46 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+import math
 
 def get_data(dirpath):
-    files = os.listdir(dirpath)
-    files.sort(key=lambda x: int(x[:-4]))
+    files = sorted(os.listdir(dirpath), key=lambda x: int(x[:-4]))
+    # files.sort(key=lambda x: int(x[:-4]))
 
     labels = ["Accuracy", "Prediction margin"]
     data = [[], []]
     for filepath in files:
-        temp = np.loadtxt(dirpath + filepath, delimiter=",").T
+        temp = np.loadtxt(dirpath + filepath, delimiter=",", usecols=(0, 1)).T
         data[0].append(temp[0])
         data[1].append(temp[1])
 
     return labels, data
+
+def basic_plot(dirpath):
+    labels, results = get_data(dirpath)
+    
+    means = [[], []]
+    stds = [[], []]
+    for i in range(2):
+        for j in range(len(results[0])):
+            arr = np.array(results[i][j])
+            means[i].append(arr.mean())
+            stds[i].append(arr.std())
+
+    fig, axs = plt.subplots(1, len(results), figsize=(12, 4))
+    plt.gcf().canvas.manager.set_window_title("Fault injection results")
+    for i in range(len(results)):
+        data = results[i]
+        axs[i].errorbar([j for j in range(len(data))], data, yerr=stds[i])
+        axs[i].set_title(labels[i] + " over #faults")
+        axs[i].set_xlabel("Number of Faults")
+        axs[i].set_ylabel(labels[i])
+        axs[i].set_xticks(range(len(data)))
+        axs[i].set_xticklabels(range(len(data)))
+        axs[i].axhline(y=data[0].mean(), color="blue", linestyle="--", linewidth=1, label="0 fault")
+
+    plt.tight_layout()
+    plt.show()
 
 def box_plot(dirpath):
     labels, results = get_data(dirpath)
@@ -93,7 +120,7 @@ def bit_pos_err(dirpath):
     plt.legend()
     plt.show()
 
-dirpath = "../results/faults_ubiq/"
-box_plot(dirpath)
+dirpath = "../results/faults_output/"
+basic_plot(dirpath)
 
 # bit_pos_err("../results/bit_pos_test.txt")
