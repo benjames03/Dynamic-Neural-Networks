@@ -2,7 +2,7 @@ import torch
 import os
 import pandas as pd
 
-# Function to calculate precision for each class
+# Calculate precision for each class for a confusion matrix
 def precision(conf_matrix):
     with torch.no_grad():
         true_positives = torch.diag(conf_matrix)
@@ -10,22 +10,22 @@ def precision(conf_matrix):
         precisions = true_positives / (predicted_positives + 1e-8)  # Adding epsilon to prevent division by zero
     return precisions
 
-# Function to calculate recall for each class
+# Calculate recall for each class for a confusion matrix
 def recall(conf_matrix):
     with torch.no_grad():
         true_positives = torch.diag(conf_matrix)
         actual_positives = conf_matrix.sum(dim=1)
-        recalls = true_positives / (actual_positives + 1e-8)  # Adding epsilon to prevent division by zero
+        recalls = true_positives / (actual_positives + 1e-8)
     return recalls
 
-# Function to calculate F1 score for each class
+# Calculate F1 for each class for a confusion matrix
 def f1_score(precisions, recalls):
     with torch.no_grad():
-        f1s = 2 * (precisions * recalls) / (precisions + recalls + 1e-8)  # Adding epsilon to prevent division by zero
+        f1s = 2 * (precisions * recalls) / (precisions + recalls + 1e-8)
     return f1s
 
 def analyse():
-    model = None # load model
+    model = None # load big-little model
 
     precisions = precision(model.conf_matrix)
     recalls = recall(model.conf_matrix)

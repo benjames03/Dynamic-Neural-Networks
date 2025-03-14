@@ -72,12 +72,12 @@ class SimLeNet(nn.Module):
                 new_state_dict[key] = value
         return super().load_state_dict(new_state_dict, strict, assign)
     
-    def inject_faults(self, faults):
-        self.conv1.inject_faults(faults)
-        self.conv2.inject_faults(faults)
-        self.linear1.conv.inject_faults(faults)
-        self.linear2.conv.inject_faults(faults)
-        self.linear3.conv.inject_faults(faults)
+    def inject_faults(self, faults, set=1):
+        self.conv1.inject_faults(faults, set)
+        self.conv2.inject_faults(faults, set)
+        self.linear1.conv.inject_faults(faults, set)
+        self.linear2.conv.inject_faults(faults, set)
+        self.linear3.conv.inject_faults(faults, set)
 
     def forward(self, input):
         out = self.conv1(input)

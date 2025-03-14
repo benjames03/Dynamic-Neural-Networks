@@ -38,14 +38,14 @@ def get_data_mp(batch_size, num_loaders):
     return loaders
 
 def eval_submodel(args):
-    loader, faults = args
+    loader, faults, set = args
     if all(fault[1] > 29 for fault in faults):
         model = lenet.LeNet().to("cpu")
         model.load_state_dict(torch.load(MODEL_PATH, weights_only=True))
     else:
         model = lenet.SimLeNet().to("cpu")
         model.load_state_dict(torch.load(MODEL_PATH, weights_only=True))
-        model.inject_faults(faults)
+        model.inject_faults(faults, set)
 
     model.eval()
     total_acc, total_margin = 0, 0
@@ -59,6 +59,8 @@ def eval_submodel(args):
                 probs = F.softmax(pred, dim=1)
                 vals, _ = torch.topk(probs, 2, dim=1)
                 total_margin += torch.sum(vals[:, 0] - vals[:, 1]).item()
+            else:
+                print("nan")
             print(f"\r{i+1}/{len(loader)}", end="")
         
     total_acc /= len(loader.dataset)
@@ -66,13 +68,12 @@ def eval_submodel(args):
     return [total_acc, total_margin]
 
 # use mp.set_start_method("spawn")
-def full_inference(loaders, num_faults):
+def full_inference(loaders, num_faults, set=1):
     macs, multipliers, bits = 16, 64, 32
+    # faults = [(10, 27, 24)]
     faults = [(random.randrange(macs), random.randrange(multipliers), random.randrange(bits)) for _ in range(num_faults)]
-    # faults = [(random.randrange(macs), 2, 31) for _ in range(num_faults)]
-    # print(f"Faults: {faults}")
     with mp.Pool(processes=len(loaders)) as pool:
-        results = pool.map(eval_submodel, [(loader, faults) for loader in loaders])
+        results = pool.map(eval_submodel, [(loader, faults, set) for loader in loaders])
         mean_acc = sum(result[0] for result in results) / len(results)
         mean_mar = sum(result[1] for result in results) / len(results)
     return (mean_acc, mean_mar, faults)
@@ -84,12 +85,14 @@ def append_record(num_faults, accuracy, margin, faults):
 if __name__ == "__main__":
     mp.set_start_method("spawn")
     loaders = get_data_mp(batch_size=500, num_loaders=2)
-    num_faults = 7
+    num_faults = 8
     num_tests = 100
+    set = 1
     for i in range(num_tests):
         start = time.time()
-        (accuracy, margin, faults) = full_inference(loaders, num_faults)
+        (accuracy, margin, faults) = full_inference(loaders, num_faults, set)
         append_record(num_faults, accuracy, margin, faults)
+        # print("\r", accuracy, margin, faults, set)
         stop = time.time()
         print(f"\r{i+1}/{num_tests} tests ({stop-start:.2f}s)")
 

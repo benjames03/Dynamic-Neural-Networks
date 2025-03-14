@@ -133,43 +133,71 @@ def eval_conv_layer():
             F.cosine_similarity(a.flatten(), b.flatten(), dim=0).item(),
             "mean dif -", torch.abs(a - b).mean().item())
     
+def eval_bit_flips():
+    bit = 30
+    num_f = torch.tensor(0x02020202, dtype=torch.float32)
+    num_i = num_f.view(torch.int32)
+    mask1 = torch.tensor(2**bit, dtype=torch.int32)
+    mask0 = ~mask1
+    print("Bit    =", bit)
+    # print("Number =", bin(num_i))
+    print("1-Mask =", format(mask1 & 0xffffffff, "032b"))
+    print("0-Mask =", format(mask0 & 0xffffffff, "032b"))
+
+    set1 = num_i | mask1
+    set0 = num_i & mask0
+    print("Number =", format(num_i & 0xffffffff, "032b"), num_f)
+    print("1-set  =", format(set1 & 0xffffffff, "032b"), set1.view(torch.float32))
+    print("0-set  =", format(set0 & 0xffffffff, "032b"), set0.view(torch.float32))
+    
 def eval_faulty_conv_layer():
     num_faults = 1
     macs, multipliers, bits = 16, 64, 32
-    faults = [(random.randrange(macs), 2, 31) for _ in range(num_faults)]
-    # faults = [(random.randrange(macs), random.randrange(multipliers), random.randrange(bits)) for _ in range(num_faults)]
+    # choose random mac, random mult (within range), and set bit 30
+    faults = [(random.randrange(macs), random.randrange(3), 30) for _ in range(num_faults)]
     print(faults)
     
     input_cube = torch.rand((50, 3, 32, 32))
     benchmark = nn.Conv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
     simulated_free = conv.SimConv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
-    simulated_faulty = conv.SimConv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
+    simulated_faulty_0 = conv.SimConv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
+    simulated_faulty_1 = conv.SimConv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
 
-    simulated_faulty.weight = benchmark.weight
-    simulated_faulty.bias = benchmark.bias
+    simulated_faulty_1.weight = benchmark.weight
+    simulated_faulty_1.bias = benchmark.bias
+    simulated_faulty_0.weight = benchmark.weight
+    simulated_faulty_0.bias = benchmark.bias
     simulated_free.weight = benchmark.weight
     simulated_free.bias = benchmark.bias
-    simulated_faulty.inject_faults(faults)
+    simulated_faulty_1.inject_faults(faults, 1)
+    simulated_faulty_0.inject_faults(faults, 0)
 
     a = benchmark(input_cube)
     b = simulated_free(input_cube)
-    c = simulated_faulty(input_cube)
-    print(torch.equal(a, b),
+    c = simulated_faulty_1(input_cube)
+    d = simulated_faulty_0(input_cube)
+
+    print("Simulated:", torch.equal(a, b),
             F.cosine_similarity(a.flatten(), b.flatten(), dim=0).item(),
-            "max err -", torch.max(a - b).mean().item())
-    print(torch.equal(a, c),
+            "max error -", torch.max(a - b).mean().item())
+    print("Faulty  1:", torch.equal(a, c),
             F.cosine_similarity(a.flatten(), c.flatten(), dim=0).item(),
-            "max err -", torch.max(a - c).mean().item())
+            "max error -", torch.max(a - c).mean().item())
+    print("Faulty  0:", torch.equal(a, d),
+            F.cosine_similarity(a.flatten(), d.flatten(), dim=0).item(),
+            "max error -", torch.max(a - d).mean().item())
+    # print(F.mse_loss(c, a))
+    # print((a == c).float().mean())
+    # print(torch.abs(a - c).mean())
+    # print(torch.norm(a - c, p=2))
 
 def record_bit_errors():
     output_file = "../results/bit_pos_test.txt"
     results = []
-    for i in range(30):
-        num_faults = 1
-        macs, multipliers, bits = 16, 64, 32
-        faults = [(3, 2, i) for _ in range(num_faults)]
-        # faults = [(random.randrange(macs), random.randrange(multipliers), random.randrange(bits)) for _ in range(num_faults)]
-        # print(faults)
+    macs, multipliers, bits = random.randrange(16), random.randrange(3), 32
+    num_faults = 1
+    for i in range(bits):
+        faults = [(macs, multipliers, i) for _ in range(num_faults)]
         
         input_cube = torch.rand((50, 3, 32, 32))
         benchmark = nn.Conv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
@@ -236,19 +264,9 @@ def eval_linear_to_conv_model():
 if __name__ == "__main__":
     start = time.time()
 
-    # mp.set_start_method("spawn")
-    # accuracy = eval_model_mp(num_loaders=4)
-
     eval_faulty_conv_layer()
-    # val = torch.tensor(0.3000048, dtype=torch.float32)
-    # int_val = val.view(torch.int32)
-    # mask = torch.tensor((1 << 30), dtype=torch.int32)
-    # int_res = int_val | mask
-    # res = int_res.view(torch.float32)
-    # print(format(int_val.item(), '032b'))
-    # print(format(mask.item(), '032b'))
-    # print(format(int_res.item(), '032b'))
-    # print(res)
+    # record_bit_errors()
+    # eval_bit_flips()
 
     end = time.time()
     print(f"({end-start:.2f}s)")

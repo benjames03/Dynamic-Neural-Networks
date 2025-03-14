@@ -17,6 +17,7 @@ class MACArray:
         self.fault_macs = []
         self.fault_mults = []
         self.fault_masks = []
+        self.set = 1
 
     def load(self, weights): # (size, multipliers)
         """Load the kernel weights into the array with zero padding if necessary"""
@@ -27,8 +28,11 @@ class MACArray:
         """Broadcasts weights to all MAC cells and multiplies them"""
         padded_weights = F.pad(weights, (0, self.multipliers-weights.size(1)), value=0)
         inter_weights = padded_weights[:, :, None] * self.cells.T[None, :, :]
-        if (self.fault_macs != []):
-            inter_weights[:, self.fault_mults, self.fault_macs] = (inter_weights[:, self.fault_mults, self.fault_macs].view(torch.int32) | self.fault_masks).view(torch.float32)
+        if self.fault_macs != []:
+            if self.set == 1:
+                inter_weights[:, self.fault_mults, self.fault_macs] = (inter_weights[:, self.fault_mults, self.fault_macs].view(torch.int32) | self.fault_masks).view(torch.float32)
+            else:
+                inter_weights[:, self.fault_mults, self.fault_macs] = (inter_weights[:, self.fault_mults, self.fault_macs].view(torch.int32) & self.fault_masks).view(torch.float32)
         self.accumulators.copy_(inter_weights.sum(dim=1))
 
 class SimConv2d(nn.Conv2d):
@@ -47,7 +51,7 @@ class SimConv2d(nn.Conv2d):
         self.mac_array = MACArray(batches=500, size=out_channels, multipliers=64)
         self.output_shape = (0, 0, 0, 0)
     
-    def inject_faults(self, faults):
+    def inject_faults(self, faults, set=1):
         fault_macs, fault_mults, fault_masks = [], [], []
         for (macu, mult, bit) in faults:
             if macu < self.weight.shape[0] and mult < self.weight.shape[1]:
@@ -66,7 +70,7 @@ class SimConv2d(nn.Conv2d):
 
         self.mac_array.fault_macs = fault_macs
         self.mac_array.fault_mults = fault_mults
-        self.mac_array.fault_masks = fault_masks
+        self.mac_array.fault_masks = fault_masks if set == 1 else ~fault_masks
 
     def load_kernels(self, kd, ky, kx): # e.g. (z, y, x)
         """Cache each kernel slice into a MAC cell"""
