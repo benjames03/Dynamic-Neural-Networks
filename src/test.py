@@ -169,8 +169,8 @@ def eval_faulty_conv_layer():
     simulated_faulty_0.bias = benchmark.bias
     simulated_free.weight = benchmark.weight
     simulated_free.bias = benchmark.bias
-    simulated_faulty_1.inject_faults(faults, 1)
-    simulated_faulty_0.inject_faults(faults, 0)
+    simulated_faulty_1.inject_faults(faults, 1, "out")
+    simulated_faulty_0.inject_faults(faults, 0, "out")
 
     a = benchmark(input_cube)
     b = simulated_free(input_cube)

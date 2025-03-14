@@ -51,7 +51,7 @@ class SimConv2d(nn.Conv2d):
         self.mac_array = MACArray(batches=500, size=out_channels, multipliers=64)
         self.output_shape = (0, 0, 0, 0)
     
-    def inject_faults(self, faults, set=1):
+    def inject_faults(self, faults, set=1, method="ker"): # "ker", "out"
         fault_macs, fault_mults, fault_masks = [], [], []
         for (macu, mult, bit) in faults:
             if macu < self.weight.shape[0] and mult < self.weight.shape[1]:
@@ -65,12 +65,17 @@ class SimConv2d(nn.Conv2d):
         fault_macs = torch.tensor(fault_macs, dtype=torch.int32)
         fault_mults = torch.tensor(fault_mults, dtype=torch.int32)
         fault_masks = torch.tensor(fault_masks, dtype=torch.int32)
-        # with torch.no_grad():
-        #     self.weight[fault_macs, fault_mults, :, :] = (self.weight[fault_macs, fault_mults, :, :].view(torch.int32) | fault_masks.view(-1, 1, 1).expand(-1, self.weight.shape[2], self.weight.shape[3])).view(torch.float32)
 
-        self.mac_array.fault_macs = fault_macs
-        self.mac_array.fault_mults = fault_mults
-        self.mac_array.fault_masks = fault_masks if set == 1 else ~fault_masks
+        if method == "ker": # "out" or "ker"
+            with torch.no_grad():
+                if set == 1:
+                    self.weight[fault_macs, fault_mults, :, :] = (self.weight[fault_macs, fault_mults, :, :].view(torch.int32) | fault_masks.view(-1, 1, 1).expand(-1, self.weight.shape[2], self.weight.shape[3])).view(torch.float32)
+                else:
+                    self.weight[fault_macs, fault_mults, :, :] = (self.weight[fault_macs, fault_mults, :, :].view(torch.int32) & ~fault_masks.view(-1, 1, 1).expand(-1, self.weight.shape[2], self.weight.shape[3])).view(torch.float32)
+        else:    
+            self.mac_array.fault_macs = fault_macs
+            self.mac_array.fault_mults = fault_mults
+            self.mac_array.fault_masks = fault_masks if set == 1 else ~fault_masks
 
     def load_kernels(self, kd, ky, kx): # e.g. (z, y, x)
         """Cache each kernel slice into a MAC cell"""

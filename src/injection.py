@@ -38,14 +38,14 @@ def get_data_mp(batch_size, num_loaders):
     return loaders
 
 def eval_submodel(args):
-    loader, faults, set = args
+    loader, faults, set, method = args
     if all(fault[1] > 29 for fault in faults):
         model = lenet.LeNet().to("cpu")
         model.load_state_dict(torch.load(MODEL_PATH, weights_only=True))
     else:
         model = lenet.SimLeNet().to("cpu")
         model.load_state_dict(torch.load(MODEL_PATH, weights_only=True))
-        model.inject_faults(faults, set)
+        model.inject_faults(faults, set, method)
 
     model.eval()
     total_acc, total_margin = 0, 0
@@ -68,12 +68,11 @@ def eval_submodel(args):
     return [total_acc, total_margin]
 
 # use mp.set_start_method("spawn")
-def full_inference(loaders, num_faults, set=1):
+def full_inference(loaders, num_faults, set=1, method="out"):
     macs, multipliers, bits = 16, 64, 32
-    # faults = [(10, 27, 24)]
     faults = [(random.randrange(macs), random.randrange(multipliers), random.randrange(bits)) for _ in range(num_faults)]
     with mp.Pool(processes=len(loaders)) as pool:
-        results = pool.map(eval_submodel, [(loader, faults, set) for loader in loaders])
+        results = pool.map(eval_submodel, [(loader, faults, set, method) for loader in loaders])
         mean_acc = sum(result[0] for result in results) / len(results)
         mean_mar = sum(result[1] for result in results) / len(results)
     return (mean_acc, mean_mar, faults)
@@ -88,9 +87,10 @@ if __name__ == "__main__":
     num_faults = 8
     num_tests = 100
     set = 1
+    method = "out" # "ker" or "out"
     for i in range(num_tests):
         start = time.time()
-        (accuracy, margin, faults) = full_inference(loaders, num_faults, set)
+        (accuracy, margin, faults) = full_inference(loaders, num_faults, set, method)
         append_record(num_faults, accuracy, margin, faults)
         # print("\r", accuracy, margin, faults, set)
         stop = time.time()
