@@ -1,7 +1,6 @@
 import time
 import torch
 from torchinfo import summary
-import torch.profiler
 import numpy as np
 from torch import nn
 from torch.utils.data import DataLoader
