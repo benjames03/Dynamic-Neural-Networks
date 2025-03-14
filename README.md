@@ -29,12 +29,11 @@
 - Analyze big-little model data and performance metrics using: ```python3 plot_dnn.py```
 
 ## Project Structure
-myproject/
-├── src/ - [Python source code]
-├── results/ - [Generated data]
-├── models/ - [Trained model weights]
-├── docs/ - [Documentation]
-└── datasets/ - [CIFAR-10 dataset]
+- src/ - [Python source code]
+- results/ - [Generated data]
+- models/ - [Trained model weights]
+- docs/ - [Documentation]
+- datasets/ - [CIFAR-10 dataset]
 
 ## File Descriptions
 ### train.py
