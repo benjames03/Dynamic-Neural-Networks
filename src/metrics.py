@@ -41,10 +41,15 @@ def summarise_fault_tests(fileout, dirpath):
     base_fn, test_fns = files[0], files[1:]
 
     df = pd.read_csv(dirpath + base_fn, names=["accuracy", "margin", "faults"])
+    df["margin"] = df["margin"].astype(float)
+    df = df.dropna()
     base_acc, base_mar = df["accuracy"].mean(), df["margin"].mean()
     results = [f"{base_fn[:-4]} faults ({df.shape[0]} tests): {100*base_acc:.2f}%, {base_mar:.3g}\n"]
     for test_fn in test_fns:
         df = pd.read_csv(dirpath + test_fn, names=["accuracy", "margin", "faults"])
+        df["margin"] = df["margin"].astype(float)
+        df = df.dropna()
+        # df = df[df["margin"] != 0].dropna()
         results.append(f"{test_fn[:-4]} faults ({df.shape[0]} tests): {100*(df['accuracy'].mean()-base_acc):+.2f}%, {df['margin'].mean()-base_mar:+.3g}\n")
     with open(fileout, "w") as file:
         for result in results:

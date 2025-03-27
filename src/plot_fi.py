@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -11,9 +12,11 @@ def get_data(dirpath):
     labels = ["Accuracy", "Prediction margin"]
     data = [[], []]
     for filepath in files:
-        temp = np.loadtxt(dirpath + filepath, delimiter=",", usecols=(0, 1)).T
-        data[0].append(temp[0])
-        data[1].append(temp[1])
+        df = pd.read_csv(dirpath + filepath, names=["accuracy", "margin", "faults"])
+        df["margin"] = df["margin"].astype(float)
+        df = df.dropna()
+        data[0].append(df["accuracy"].to_numpy())
+        data[1].append(df["margin"].to_numpy())
 
     return labels, data
 
@@ -163,7 +166,33 @@ def bit_pos_err(dirpath):
     plt.legend()
     plt.show()
 
-# dirpath = "../results/faults_output/"
-# hist_plot(dirpath)
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Incorrect number of arguments")
+        sys.exit()
+    
+    dirpath = "../results/faults_"
+    if (file := sys.argv[1]) == "output" or file == "kernel" or file == "ubiq":
+        dirpath += file + "/"
+    else:
+        print(f"Incorrect directory path: {file} [output, kernel, ubiq]")
+        sys.exit()
 
-bit_pos_err("../results/bit_pos_test_")
+    if (plot := sys.argv[2]) == "basic":
+        basic_plot(dirpath)
+    elif plot == "box":
+        box_plot(dirpath)
+    elif plot == "violin":
+        violin_plot(dirpath)
+    elif plot == "strip":
+        strip_plot(dirpath)
+    elif plot == "hist":
+        hist_plot(dirpath)
+    elif plot == "dist":
+        dist_plot(dirpath)
+    elif plot == "bit":
+        bit_pos_err("../results/bit_pos_test_")
+    else:
+        print(f"Incorrect plot type: {plot} [basic, box, violin, strip, hist, dist, bit]")
+        sys.exit()
+    
