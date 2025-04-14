@@ -1,0 +1,11 @@
+0 faults (100 tests): 71.40%, 0.553
+1 faults (100 tests): -0.77%, -0.00623
+2 faults (100 tests): -1.55%, -0.000134
+3 faults (100 tests): -1.24%, -0.0106
+4 faults (100 tests): -5.02%, -0.0254
+5 faults (100 tests): -2.64%, -0.0225
+6 faults (100 tests): -4.65%, -0.00565
+7 faults (100 tests): -4.51%, -0.0335
+8 faults (100 tests): -5.90%, -0.0438
+9 faults (100 tests): -5.71%, -0.0393
+10 faults (100 tests): -6.17%, -0.028

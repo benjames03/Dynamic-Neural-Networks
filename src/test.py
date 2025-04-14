@@ -202,18 +202,17 @@ def eval_faulty_conv_layer():
     # print(torch.abs(a - c).mean())
     # print(torch.norm(a - c, p=2))
 
-def record_bit_errors():
-    output_file = "../results/bit_pos_test_0.txt"
+def record_bit_errors(set=1):
+    output_file = f"../results/bit_pos_test_{set}.txt"
     results = []
     macs, multipliers, bits = random.randrange(16), random.randrange(3), 32
     num_faults = 1
+    input_cube = torch.rand((32, 3, 32, 32))
+    benchmark = nn.Conv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
     for i in range(bits):
         faults = [(macs, multipliers, i) for _ in range(num_faults)]
         
-        input_cube = torch.rand((50, 3, 32, 32))
-        benchmark = nn.Conv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
         simulated_faulty = conv.SimConv2d(in_channels=3, out_channels=30, kernel_size=3, stride=1)
-
         simulated_faulty.weight = benchmark.weight
         simulated_faulty.bias = benchmark.bias
         simulated_faulty.inject_faults(faults, 0, "out")

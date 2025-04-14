@@ -11,7 +11,7 @@ import lenet
 import resnet
 import big_little
 
-DATASET_PATH = "../../datasets/cifar10"
+DATASET_PATH = "../datasets/cifar10"
 MODELS_PATH = "../models/"
 
 def get_data(batch_size):
@@ -35,7 +35,7 @@ def load_lenet():
     else:
         device = torch.device("cpu")
     model = lenet.LeNet().to(device)
-    model.load_state_dict(torch.load(f"../models/lenet.pth", weights_only=True))
+    model.load_state_dict(torch.load(f"../models/lenet_final.pth", weights_only=True))
     return model
 
 def load_resnet9():
@@ -44,7 +44,7 @@ def load_resnet9():
     else:
         device = torch.device("cpu")
     model = resnet.ResNet9().to(device)
-    model.load_state_dict(torch.load(f"../models/resnet9.pth", weights_only=True))
+    model.load_state_dict(torch.load(f"../models/resnet9_v3.pth", weights_only=True))
     return model
 
 def load_resnet18():
@@ -62,7 +62,7 @@ def load_resnet20():
     else:
         device = torch.device("cpu")
     model = resnet.ResNet20().to(device)
-    model.load_state_dict(torch.load(f"../models/resnet20.pth", weights_only=True))
+    model.load_state_dict(torch.load(f"../models/resnet20_v2.pth", weights_only=True))
     return model
 
 def test(dataloader, model, loss_fn, threshold):

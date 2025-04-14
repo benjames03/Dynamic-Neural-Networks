@@ -1,0 +1,86 @@
+Threshold 0.00 finished in 2.68 seconds
+Resnet called 0/10000 times (0.0%)
+Threshold 0.05 finished in 3.84 seconds
+Resnet called 555/10000 times (5.5%)
+Threshold 0.10 finished in 5.18 seconds
+Resnet called 1099/10000 times (11.0%)
+Threshold 0.15 finished in 6.00 seconds
+Resnet called 1599/10000 times (16.0%)
+Threshold 0.20 finished in 6.74 seconds
+Resnet called 2049/10000 times (20.5%)
+Threshold 0.25 finished in 8.42 seconds
+Resnet called 2424/10000 times (24.2%)
+Threshold 0.30 finished in 10.56 seconds
+Resnet called 2811/10000 times (28.1%)
+Threshold 0.35 finished in 10.92 seconds
+Resnet called 3156/10000 times (31.6%)
+Threshold 0.40 finished in 11.58 seconds
+Resnet called 3541/10000 times (35.4%)
+Threshold 0.45 finished in 12.21 seconds
+Resnet called 3867/10000 times (38.7%)
+Threshold 0.50 finished in 14.38 seconds
+Resnet called 4204/10000 times (42.0%)
+Threshold 0.55 finished in 14.41 seconds
+Resnet called 4544/10000 times (45.4%)
+Threshold 0.60 finished in 15.27 seconds
+Resnet called 4875/10000 times (48.8%)
+Threshold 0.65 finished in 15.99 seconds
+Resnet called 5212/10000 times (52.1%)
+Threshold 0.70 finished in 16.09 seconds
+Resnet called 5561/10000 times (55.6%)
+Threshold 0.75 finished in 16.14 seconds
+Resnet called 5912/10000 times (59.1%)
+Threshold 0.80 finished in 18.69 seconds
+Resnet called 6304/10000 times (63.0%)
+Threshold 0.85 finished in 19.13 seconds
+Resnet called 6730/10000 times (67.3%)
+Threshold 0.90 finished in 19.61 seconds
+Resnet called 7266/10000 times (72.7%)
+Threshold 0.95 finished in 21.45 seconds
+Resnet called 7963/10000 times (79.6%)
+Threshold 1.00 finished in 26.58 seconds
+Resnet called 10000/10000 times (100.0%)
+---------------------------
+Threshold 0.00 finished in 3.88 seconds
+Resnet called 0/10000 times (0.0%)
+Threshold 0.05 finished in 5.08 seconds
+Resnet called 555/10000 times (5.5%)
+Threshold 0.10 finished in 6.20 seconds
+Resnet called 1099/10000 times (11.0%)
+Threshold 0.15 finished in 7.19 seconds
+Resnet called 1599/10000 times (16.0%)
+Threshold 0.20 finished in 8.18 seconds
+Resnet called 2049/10000 times (20.5%)
+Threshold 0.25 finished in 8.53 seconds
+Resnet called 2424/10000 times (24.2%)
+Threshold 0.30 finished in 9.30 seconds
+Resnet called 2811/10000 times (28.1%)
+Threshold 0.35 finished in 10.22 seconds
+Resnet called 3156/10000 times (31.6%)
+Threshold 0.40 finished in 10.90 seconds
+Resnet called 3541/10000 times (35.4%)
+Threshold 0.45 finished in 11.60 seconds
+Resnet called 3867/10000 times (38.7%)
+Threshold 0.50 finished in 12.10 seconds
+Resnet called 4204/10000 times (42.0%)
+Threshold 0.55 finished in 12.67 seconds
+Resnet called 4544/10000 times (45.4%)
+Threshold 0.60 finished in 13.48 seconds
+Resnet called 4875/10000 times (48.8%)
+Threshold 0.65 finished in 13.92 seconds
+Resnet called 5212/10000 times (52.1%)
+Threshold 0.70 finished in 14.36 seconds
+Resnet called 5561/10000 times (55.6%)
+Threshold 0.75 finished in 14.98 seconds
+Resnet called 5912/10000 times (59.1%)
+Threshold 0.80 finished in 15.89 seconds
+Resnet called 6304/10000 times (63.0%)
+Threshold 0.85 finished in 17.50 seconds
+Resnet called 6730/10000 times (67.3%)
+Threshold 0.90 finished in 17.97 seconds
+Resnet called 7266/10000 times (72.7%)
+Threshold 0.95 finished in 20.04 seconds
+Resnet called 7963/10000 times (79.6%)
+Threshold 1.00 finished in 23.43 seconds
+Resnet called 10000/10000 times (100.0%)
+Finished in 534.01 seconds

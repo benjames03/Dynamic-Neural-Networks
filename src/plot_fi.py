@@ -12,9 +12,11 @@ def get_data(dirpath):
     labels = ["Accuracy", "Prediction margin"]
     data = [[], []]
     for filepath in files:
-        df = pd.read_csv(dirpath + filepath, names=["accuracy", "margin", "faults"])
+        df = pd.read_csv(dirpath + filepath)
+        df.columns = ["accuracy", "margin"] if df.shape[1] == 2 else ["accuracy", "margin", "faults"]
         df["margin"] = df["margin"].astype(float)
-        df = df.dropna()
+        # df = df.dropna()
+        df = df[df["margin"] != 0].dropna()
         data[0].append(df["accuracy"].to_numpy())
         data[1].append(df["margin"].to_numpy())
 
@@ -54,15 +56,16 @@ def box_plot(dirpath):
     plt.gcf().canvas.manager.set_window_title("Fault injection results")
     for i in range(len(results)):
         data = results[i]
-        axs[i].boxplot(data, whis=50)
+        axs[i].boxplot(data, whis=500, patch_artist=True)
         axs[i].set_title(labels[i] + " over #faults")
         axs[i].set_xlabel("Number of Faults")
         axs[i].set_ylabel(labels[i])
         axs[i].set_xticks(range(len(data)))
         axs[i].set_xticklabels(range(len(data)))
-        axs[i].axhline(y=data[0].mean(), color="blue", linestyle="--", linewidth=1, label="0 fault")
+        axs[i].axhline(y=data[0].mean(), color="green", linestyle="-", linewidth=1, label="0 fault")
 
     plt.tight_layout()
+    # plt.savefig("../results/graphs/fault_bit.pdf", format="pdf", bbox_inches="tight")
     plt.show()
 
 def violin_plot(dirpath):
@@ -72,7 +75,7 @@ def violin_plot(dirpath):
     plt.gcf().canvas.manager.set_window_title("Fault injection results")
     for i in range(len(results)):
         data = results[i]
-        sns.violinplot(ax=axs[i], data=data, inner="box")
+        sns.violinplot(ax=axs[i], data=data, inner="box", bw_method=0.4)
         axs[i].set_title(labels[i] + " over #faults")
         axs[i].set_xlabel("Number of Faults")
         axs[i].set_ylabel(labels[i])
@@ -81,6 +84,7 @@ def violin_plot(dirpath):
         axs[i].axhline(y=data[0].mean(), color="blue", linestyle="--", linewidth=1, label="0 fault")
 
     plt.tight_layout()
+    # plt.savefig("../results/graphs/fault_bit.pdf", format="pdf", bbox_inches="tight")
     plt.show()
 
 def strip_plot(dirpath):
@@ -99,26 +103,33 @@ def strip_plot(dirpath):
         axs[i].axhline(y=data[0].mean(), color="blue", linestyle="--", linewidth=1, label="0 fault")
 
     plt.tight_layout()
+    # plt.savefig("../results/graphs/out_1_strip.pdf", format="pdf", bbox_inches="tight")
     plt.show()
 
 def hist_plot(dirpath): # removing the top 80%
     labels, results = get_data(dirpath)
     
-    n = len(results[0])
-    size = 5
-    fig, axs = plt.subplots(math.ceil(n / size)-1, min(n, size), figsize=(12, 4))
+    p = 0 # 0 - acc, 1 - margin
+    size = 2
+    n = len(results[p]) - 1
+    base_mean = np.array(results[p][0]).mean()
+
+    fig, axs = plt.subplots(math.ceil(n / size), min(n, size), figsize=(8, 10), squeeze=False)
     plt.gcf().canvas.manager.set_window_title("Fault injection results")
-    for i in range(1, n):
+    for i in range(1, n+1):
         x, y = (i-1) % size, (i-1) // size
-        data = np.array(results[0][i])
+        data = np.array(results[p][i])
         top = np.percentile(data, 20)
+        # axs[y][x].hist(data, bins=50)
         axs[y][x].hist(data[data < top], bins=50)
         axs[y][x].grid(True)
-        axs[y][x].set_title(i)
+        axs[y][x].set_title(f"{i} Fault" + ("" if i == 1 else "s"))
         axs[y][x].set_xlabel("Accuracy")
         axs[y][x].set_ylabel("Frequency")
+        axs[y][x].axvline(x=base_mean, color="red", linestyle="-", linewidth=1, label="0 fault")
 
-    plt.tight_layout()
+    plt.tight_layout(h_pad=2)
+    plt.savefig("../results/graphs/out_1_hist.pdf", format="pdf", bbox_inches="tight")
     plt.show()
 
 def dist_plot(dirpath):
@@ -151,34 +162,47 @@ def bit_pos_err(dirpath):
         n = dfs[i]["index"].value_counts().mean()
         dfs[i] = dfs[i].groupby("index").mean()
 
-        axs[i].plot(dfs[i].index, dfs[i]["sim"], color="blue", label="Similarity")
-        axs[i].set_xlabel("Bit position")
-        axs[i].set_ylabel("Similarity", color="blue")
+    axs[0].set_title(f"Cosine Similarity over bit position")
+    axs[0].plot(dfs[0].index, dfs[0]["sim"], color="blue", label="Set 0", marker="o", ms=3)
+    axs[0].plot(dfs[1].index, dfs[1]["sim"], color="red", label="Set 1", marker="o", ms=3)
+    axs[0].set_xlabel("Faulty Bit position")
+    axs[0].set_ylabel("Cosine Similarity")
+    axs[0].legend()
+    axs[0].grid()
 
-        ax2 = axs[i].twinx()
-        ax2.grid(True)
-        ax2.plot(dfs[i].index, dfs[i]["error"], color="red", label="Max Error")
-        ax2.set_xlabel("Bit position")
-        ax2.set_ylabel("Max Error", color="red")
+    axs[1].set_title(f"Maximum Error over bit position")
+    axs[1].plot(dfs[0].index, dfs[0]["error"], color="blue", label="Set 0", marker="o", ms=3)
+    axs[1].plot(dfs[1].index, dfs[1]["error"], color="red", label="Set 1", marker="o", ms=3)
+    axs[1].set_xlabel("Faulty Bit position")
+    axs[1].set_ylabel("Max. Error")
+    axs[1].legend()
+    axs[1].grid()
 
-    axs[0].set_title(f"Error and Cosine similarity over bit position ({int(n)} tests, set 0)")
-    axs[1].set_title(f"Error and Cosine similarity over bit position ({int(n)} tests, set 1)")
-    plt.legend()
+    # axs[0].set_yscale("symlog", linthresh=1e-0)
+    axs[1].set_yscale("log")
+
+    plt.tight_layout()
+    plt.savefig("../results/graphs/fault_bit.pdf", format="pdf", bbox_inches="tight")
     plt.show()
 
-if __name__ == "__main__":
-    if len(sys.argv) != 3:
+if __name__ == "__main__": # python3 plot_f1.py 0 output box
+    if len(sys.argv) != 4:
         print("Incorrect number of arguments")
         sys.exit()
     
-    dirpath = "../results/faults_"
-    if (file := sys.argv[1]) == "output" or file == "kernel" or file == "ubiq":
+    set = sys.argv[1]
+    if set != "0" and set != "1":
+        print("Incorrect set [0, 1]")
+        sys.exit()
+    
+    dirpath = "../results/" + set + "/faults_"
+    if (file := sys.argv[2]) == "output" or file == "kernel" or file == "ubiq":
         dirpath += file + "/"
     else:
         print(f"Incorrect directory path: {file} [output, kernel, ubiq]")
         sys.exit()
 
-    if (plot := sys.argv[2]) == "basic":
+    if (plot := sys.argv[3]) == "basic":
         basic_plot(dirpath)
     elif plot == "box":
         box_plot(dirpath)

@@ -10,7 +10,7 @@ import lenet
 
 DATASET_PATH = "../datasets/cifar10"
 MODEL_PATH = "../models/lenet.pth"
-RESULTS_PATH = "../results/faults_output/"
+RESULTS_PATH = "../results/faults_0_output/"
 
 float_type = torch.float32 # torch.float32 or torch.float16
 torch.set_default_dtype(float_type)
@@ -46,9 +46,11 @@ def eval_submodel(args):
     else:
         device = torch.device("cpu")
     loader, faults, set, method = args
-    if all(fault[1] > 29 for fault in faults):
+    if all(fault[1] > 29 for fault in faults) or method == "ker":
         model = lenet.LeNet().to(device)
         model.load_state_dict(torch.load(MODEL_PATH, weights_only=True))
+        # if method == "ker":
+        #     model.inject_faults(faults, set)
     else:
         model = lenet.SimLeNet().to(device)
         model.load_state_dict(torch.load(MODEL_PATH, weights_only=True))
@@ -92,15 +94,15 @@ def append_record(num_faults, accuracy, margin, faults):
 if __name__ == "__main__":
     mp.set_start_method("spawn")
     loaders = get_data_mp(batch_size=500, num_loaders=2)
-    num_faults = 8
+    num_faults = 10
     num_tests = 100
-    set = 1
-    method = "out" # "ker" or "out"
+    set = 0
+    method = "ker" # "ker" or "out"
     for i in range(num_tests):
         start = time.time()
         (accuracy, margin, faults) = full_inference(loaders, num_faults, set, method)
-        append_record(num_faults, accuracy, margin, faults)
-        # print("\r", accuracy, margin, faults, set)
+        # append_record(num_faults, accuracy, margin, faults)
+        print("\r", set, accuracy, margin, faults)
         stop = time.time()
         print(f"\r{i+1}/{num_tests} tests ({stop-start:.2f}s)")
 
