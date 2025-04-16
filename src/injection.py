@@ -10,7 +10,7 @@ import lenet
 
 DATASET_PATH = "../datasets/cifar10"
 MODEL_PATH = "../models/lenet.pth"
-RESULTS_PATH = "../results/faults_0_output/"
+RESULTS_PATH = "../results/0/faults_kernel/"
 
 float_type = torch.float32 # torch.float32 or torch.float16
 torch.set_default_dtype(float_type)
